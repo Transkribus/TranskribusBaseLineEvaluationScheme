@@ -227,9 +227,9 @@ public class Metric_BL_run {
             if (!"".equals(imagePath)) {
                 Util.plotPlausi(imagePath, polyPagesTruth[0], polyPagesReco[0]);
             }
-            
+
             //Display of avg for thresholded values
-            if(thresholdDisplay){
+            if (thresholdDisplay) {
                 //ToDo
             }
         } catch (ParseException e) {
@@ -241,13 +241,15 @@ public class Metric_BL_run {
      * @param args the command line arguments
      */
     public static void main(String[] args) throws IOException {
-        args = new String[6];
-        args[0] = "src/test/resources/truth.lst";
-        args[1] = "src/test/resources/reco.lst";
-        args[2] = "-p";
-        args[3] = "-tol";
-        args[4] = "-i";
-        args[5] = "src/test/resources/metrEx.png";
+        if (args.length == 0) {
+            args = new String[6];
+            args[0] = "src/test/resources/truth.lst";
+            args[1] = "src/test/resources/reco.lst";
+            args[2] = "-p";
+            args[3] = "-tol";
+            args[4] = "-i";
+            args[5] = "src/test/resources/metrEx.png";
+        }
 //        args = ("--help").split(" ");
         Metric_BL_run erp = new Metric_BL_run();
         erp.run(args);
