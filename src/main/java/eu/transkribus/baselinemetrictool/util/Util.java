@@ -5,13 +5,13 @@ package eu.transkribus.baselinemetrictool.util;
 /// Created:    21.04.2016  13:25:07
 /// Encoding:   UTF-8
 ////////////////////////////////////////////////
-
-
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.GraphicsDevice;
+import java.awt.GraphicsEnvironment;
 import java.awt.Polygon;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
@@ -145,16 +145,16 @@ public class Util {
         return null;
     }
 
-    
     public static Polygon[] normDesDist(Polygon[] polyIn, int desDist) {
         Polygon[] res = new Polygon[polyIn.length];
         for (int i = 0; i < res.length; i++) {
+            polyIn[i].getBounds();
             res[i] = normDesDist(polyIn[i], desDist);
+            res[i].getBounds();
         }
         return res;
     }
-    
-    
+
     public static Polygon normDesDist(Polygon polyIn, int desDist) {
         Polygon polyBlown = blowUp(polyIn);
         return thinOut(polyBlown, desDist);
@@ -216,18 +216,9 @@ public class Util {
             int aIdx = (int) (i * step);
             res.addPoint(polyBlown.xpoints[aIdx], polyBlown.ypoints[aIdx]);
         }
-        res.addPoint(polyBlown.xpoints[polyBlown.npoints-1], polyBlown.ypoints[polyBlown.npoints-1]);
+        res.addPoint(polyBlown.xpoints[polyBlown.npoints - 1], polyBlown.ypoints[polyBlown.npoints - 1]);
         return res;
     }
-    
-    
-    
-    
-    
-    
-    
-    
-    
 
     public static void plotPlausi(String pathToImg, Polygon[] polysTruth, Polygon[] polysReco) throws IOException {
         BufferedImage img = ImageIO.read(new File(pathToImg));
@@ -273,7 +264,19 @@ public class Util {
 
         @Override
         public Dimension getPreferredSize() {
-            return new Dimension(image.getWidth(this), image.getHeight(this));
+            GraphicsDevice gd = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
+            int width = gd.getDisplayMode().getWidth();
+            int height = gd.getDisplayMode().getHeight();
+            int widthImg = image.getWidth(this);
+            int heightImg = image.getHeight(this);
+            
+            double sW = (double)widthImg / width;
+            double sH = (double)heightImg / height;
+            
+            double scale = Math.max(sH, sW);
+            scale = Math.max(scale, 1.0);
+            
+            return new Dimension((int)(widthImg/scale), (int)(heightImg/scale));
         }
 
         @Override
@@ -281,6 +284,10 @@ public class Util {
             super.paintComponent(g);
             g.drawImage(image, 0, 0, this.getWidth(), this.getHeight(), this);
         }
+    }
+
+    public static double fmeas(double prec, double rec) {
+        return 2.0 * rec * prec / (rec + prec);
     }
 
 }

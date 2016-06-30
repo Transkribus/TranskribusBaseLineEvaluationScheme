@@ -5,11 +5,8 @@ package eu.transkribus.baselinemetrictool;
 /// Created:    22.04.2016  11:16:20
 /// Encoding:   UTF-8
 ////////////////////////////////////////////////
-
-
-import eu.transkribus.baselinemetrictool.util.MetricResult;
+import eu.transkribus.baselinemetrictool.util.BaseLineMetricResult;
 import eu.transkribus.baselinemetrictool.util.Util;
-import java.awt.Point;
 import java.awt.Polygon;
 import java.awt.Rectangle;
 
@@ -23,194 +20,135 @@ import java.awt.Rectangle;
  */
 public class Metric_BL_eval {
 
-    public static MetricResult process(Polygon[][] polyPagesTruth, Polygon[][] polyPagesReco) {
+    public double[] maxTolTicks;
+    private int desPolyTickDist;
+    private BaseLineMetricResult res;
 
-        MetricResult res = new MetricResult();
-
-        double avgOverPagesPrecision = 0.0;
-        double avgOverPagesRecall = 0.0;
-
-        double[] avgPerPagePrecision = new double[polyPagesTruth.length];
-        double[] avgPerPageRecall = new double[polyPagesTruth.length];
-        double[] avgPerPageFmeas = new double[polyPagesTruth.length];
-
-        //Number of ticks for thresholded recall/precission evaluation
-        int ticks = 101;
-        double[] avgOverPagesRecallThr = new double[ticks];
-        double[] avgOverPagesPrecisionThr = new double[ticks];
-
-        for (int i = 0; i < polyPagesTruth.length; i++) {
-            Polygon[] polysTruthA = polyPagesTruth[i];
-            Polygon[] polysRecoA = polyPagesReco[i];
-            double[] precision;
-            double[] recall;
-            if (polysTruthA == null || polysRecoA == null) {
-                if (polysTruthA == null) {
-                    if (polysRecoA == null) {
-                        precision = new double[]{1.0};
-                        recall = new double[]{1.0};
-                    } else {
-                        precision = new double[]{0.0};
-                        recall = new double[]{1.0};
-                    }
-                } else {
-                    precision = new double[]{1.0};
-                    recall = new double[]{0.0};
-                }
-
-            } else {
-                //Normalise the baselines, that poly points have a desired "distance"
-                Polygon[] polysTruthBlownA = Util.normDesDist(polysTruthA, 5);
-                Polygon[] polysRecoBlownA = Util.normDesDist(polysRecoA, 5);
-
-                //Calc Tolerance Value
-                double[] tol = calcTol(polysTruthA, polysTruthBlownA);
-
-                recall = new double[polysTruthA.length];
-                for (int j = 0; j < recall.length; j++) {
-                    recall[j] = recall(polysRecoBlownA, polysTruthBlownA[j], tol[j]);
-                }
-                precision = calcPrecision(polysRecoBlownA, polysTruthBlownA, tol);
-            }
-            double avgRecall = 0.0;
-            for (int j = 0; j < recall.length; j++) {
-                avgRecall += recall[j];
-            }
-            avgRecall /= recall.length;
-            avgOverPagesRecall += avgRecall;
-            double avgPrecision = 0.0;
-            for (int j = 0; j < precision.length; j++) {
-                avgPrecision += precision[j];
-            }
-            avgPrecision /= precision.length;
-            avgOverPagesPrecision += avgPrecision;
-            for (int j = 0; j < ticks; j++) {
-                double thr = (1.0 / (ticks - 1)) * j;
-                double aVal = 0.0;
-                for (int k = 0; k < recall.length; k++) {
-                    if (recall[k] > thr) {
-                        aVal++;
-                    }
-                }
-                aVal /= recall.length;
-                avgOverPagesRecallThr[j] += aVal;
-                aVal = 0.0;
-                for (int k = 0; k < precision.length; k++) {
-                    if (precision[k] > thr) {
-                        aVal++;
-                    }
-                }
-                aVal /= precision.length;
-                avgOverPagesPrecisionThr[j] += aVal;
-            }
-
-            avgPerPagePrecision[i] = avgPrecision;
-            avgPerPageRecall[i] = avgRecall;
-            avgPerPageFmeas[i] = fmeas(avgPrecision, avgRecall);
+    /**
+     * Default constructor with minTol = 10, maxTol = 30 and desPolyTickDist = 5 .
+     */
+    public Metric_BL_eval() {
+        maxTolTicks = new double[30 - 10 + 1];
+        for (int i = 0; i < maxTolTicks.length; i++) {
+            maxTolTicks[i] = 10 + i;
         }
-
-        avgOverPagesRecall /= polyPagesTruth.length;
-        avgOverPagesPrecision /= polyPagesTruth.length;
-        double avgOverPagesFmeas = fmeas(avgOverPagesPrecision, avgOverPagesRecall);
-        res.finRecall = avgOverPagesRecall;
-        res.finPrecision = avgOverPagesPrecision;
-        res.finFmeas = avgOverPagesFmeas;
-
-        res.pageWiseRecall = avgPerPageRecall;
-        res.pageWisePrecision = avgPerPagePrecision;
-        res.pageWiseFmeas = avgPerPageFmeas;
-
-
-        double[] xTick = new double[ticks];
-        double[] fmeas = new double[ticks];
-        for (int i = 0; i < ticks; i++) {
-            xTick[i] = (1.0 / (ticks - 1)) * i;
-            avgOverPagesRecallThr[i] /= polyPagesTruth.length;
-            avgOverPagesPrecisionThr[i] /= polyPagesTruth.length;
-            fmeas[i] = fmeas(avgOverPagesPrecisionThr[i], avgOverPagesRecallThr[i]);
+        res = new BaseLineMetricResult();
+        desPolyTickDist = 5;
+    }
+    
+    /**
+     * 
+     * @param minTol - MINIMUM distance tolerance which is not penalized
+     * @param maxTol - MAXIMUM distance tolerance which is not penalized
+     */
+    public Metric_BL_eval(int minTol, int maxTol) {
+        maxTolTicks = new double[maxTol - minTol + 1];
+        for (int i = 0; i < maxTolTicks.length; i++) {
+            maxTolTicks[i] = minTol + i;
         }
-        double[][] vals = new double[3][];
-        vals[0] = avgOverPagesRecallThr;
-        vals[1] = avgOverPagesPrecisionThr;
-        vals[2] = fmeas;
-        
-        res.xTickThr = xTick;
-        res.valsThr = vals;
+        res = new BaseLineMetricResult();
+        desPolyTickDist = 5;
+    }
+    
+    /**
+     * 
+     * @param minTol - MINIMUM distance tolerance which is not penalized
+     * @param maxTol - MAXIMUM distance tolerance which is not penalized
+     * @param desPolyTickDist - Desired distance of points of the baseline polygons
+     */
+    public Metric_BL_eval(int minTol, int maxTol, int desPolyTickDist) {
+        this(minTol, maxTol);
+        this.desPolyTickDist = desPolyTickDist;
+    }
+
+    public BaseLineMetricResult getRes() {
         return res;
     }
 
-    private static double[] calcTol(Polygon[] polyTruthBlown, Polygon[] polyTruth) {
-        double maxTol = 50;
-        double[] tol = new double[polyTruth.length];
-        for (int i = 0; i < polyTruth.length; i++) {
-            Polygon aPoly = polyTruth[i];
-            double sumDist = 0.0;
-            for (int j = 0; j < aPoly.npoints; j++) {
-                Point pA = new Point(aPoly.xpoints[j], aPoly.ypoints[j]);
-                double minDist = getMinDist(pA, i, polyTruthBlown);
-                sumDist += Math.min(maxTol, minDist / 7.5);
-            }
-            tol[i] = sumDist / aPoly.npoints;
-        }
-        return tol;
-    }
-
-    private static double getMinDist(Point pA, int ignore, Polygon[] polyTruth) {
-        double dist = Double.MAX_VALUE;
-        for (int i = 0; i < polyTruth.length; i++) {
-            if (i != ignore) {
-                Polygon polyC = polyTruth[i];
-                for (int j = 0; j < polyC.npoints; j++) {
-                    dist = Math.min(dist, Math.sqrt((polyC.xpoints[j] - pA.x) * (polyC.xpoints[j] - pA.x) + (polyC.ypoints[j] - pA.y) * (polyC.ypoints[j] - pA.y)));
-                }
-
-            }
-        }
-        return dist;
-    }
-
-    private static double recall(Polygon[] reco, Polygon truth, double tol) {
-        return cntHitsList(truth, reco, tol) / truth.npoints;
-    }
-
-    private static double cntHitsList(Polygon toCnt, Polygon[] refL, double tol) {
-        double cnt = 0;
-        Rectangle toCntBB = toCnt.getBounds();
-        for (int i = 0; i < toCnt.npoints; i++) {
-            int xA = toCnt.xpoints[i];
-            int yA = toCnt.ypoints[i];
-            boolean match = false;
-            double minDist = Double.MAX_VALUE;
-            for (Polygon ref : refL) {
-                Rectangle refBB = ref.getBounds();
-                Rectangle inter = toCntBB.intersection(refBB);
-                int maxI = Math.max(inter.width, inter.height);
-                if (maxI < -3.0 * tol) {
-                    continue;
-                }
-                for (int j = 0; j < ref.npoints; j++) {
-                    int xC = ref.xpoints[j];
-                    int yC = ref.ypoints[j];
-//                    minDist = Math.min(Math.abs(xC-xA)+Math.abs(yC-yA), minDist);
-                    minDist = Math.min(Math.sqrt((xC - xA) * (xC - xA) + (yC - yA) * (yC - yA)), minDist);
-                    if (minDist <= tol) {
-                        cnt += 1.0;
-                        match = true;
-                        break;
+    /**
+     * Calculates the BaseLineMetric Stats for truth and reco polygons of a
+     * single page, and adds the result to the MetricResult Structure
+     *
+     * @param polyTruth Array of TRUTH Polygons corresponding to a single page
+     * @param polyReco Array of RECO Polygons corresponding to a single page
+     */
+    public void calcMetricForPageBaseLinePolys(Polygon[] polyTruth, Polygon[] polyReco) {
+        double[][] precision = new double[maxTolTicks.length][];
+        double[][] recall = new double[maxTolTicks.length][];
+        //Take care of degenerated scenarios
+        if (polyTruth == null || polyReco == null) {
+            if (polyTruth == null) {
+                if (polyReco == null) {
+                    for (int i = 0; i < maxTolTicks.length; i++) {
+                        precision[i] = new double[]{1.0};
+                        recall[i] = new double[]{1.0};
+                    }
+                } else {
+                    for (int i = 0; i < maxTolTicks.length; i++) {
+                        precision[i] = new double[]{0.0};
+                        recall[i] = new double[]{1.0};
                     }
                 }
-                if (match) {
-                    break;
+            } else {
+                for (int i = 0; i < maxTolTicks.length; i++) {
+                    precision[i] = new double[]{1.0};
+                    recall[i] = new double[]{0.0};
                 }
             }
-            if (minDist > tol && minDist < 3.0 * tol) {
-                cnt += (3.0 * tol - minDist) / (2.0 * tol);
+
+        } else {
+            //Normalise the baselines, that poly points have a desired "distance"
+            Polygon[] polysTruthNorm = Util.normDesDist(polyTruth, desPolyTickDist);
+            Polygon[] polysRecoNorm = Util.normDesDist(polyReco, desPolyTickDist);
+
+            //for each truthPoly calculate the recall values for all tolerances
+            recall = calcRecall(recall, polysRecoNorm, polysTruthNorm);
+            //for each recoPoly calculate the precission values for all tolerances
+            precision = calcPrecision(precision, polysRecoNorm, polysTruthNorm);
+        }
+        res.addPerDistTolTickPerLinePrecision(precision);
+        res.addPerDistTolTickPerLineRecall(recall);
+    }
+    
+    
+    private double[][] calcPrecision(double[][] precision, Polygon[] polyRecoNorm, Polygon[] polyTruthNorm) {
+        //initialize precision values
+        for (int i = 0; i < maxTolTicks.length; i++) {
+            precision[i] = new double[polyRecoNorm.length];
+        }
+        
+        double[][][] C = new double[maxTolTicks.length][polyRecoNorm.length][polyTruthNorm.length];
+        for (int i = 0; i < polyRecoNorm.length; i++) {
+            for (int j = 0; j < polyTruthNorm.length; j++) {
+                double[] cntRelHits = cntRelHits(polyRecoNorm[i], polyTruthNorm[j]);
+                for (int k = 0; k < cntRelHits.length; k++) {
+                    double cntRelHit = cntRelHits[k];
+                    C[k][i][j] = cntRelHit;
+                }
             }
         }
-        return cnt;
-    }
+        //Calculation of the Alignment
+        for (int i = 0; i < C.length; i++) {
+            double[][] aC = C[i];
+            while (true) {
+                int[] maxIdx = getMaxIdx(aC);
+                if (maxIdx[0] < 0) {
+                    break;
+                }
+                precision[i][maxIdx[0]] = aC[maxIdx[0]][maxIdx[1]];
 
-    private static int[] getMaxIdx(double[][] C) {
+                for (int j = 0; j < aC.length; j++) {
+                    aC[j][maxIdx[1]] = 0.0;
+                }
+                for (int j = 0; j < aC[0].length; j++) {
+                    aC[maxIdx[0]][j] = 0.0;
+                }
+            }
+        }
+        return precision;
+    }
+    
+    private int[] getMaxIdx(double[][] C) {
         double mV = 0.0;
         int maxRow = -1;
         int maxCol = -1;
@@ -228,16 +166,17 @@ public class Metric_BL_eval {
         }
         return new int[]{maxRow, maxCol};
     }
-
-    private static double cntHits(Polygon toCnt, Polygon ref, double tol) {
+    
+    private  double[] cntRelHits(Polygon toCnt, Polygon ref) {
+        double[] cnt = new double[maxTolTicks.length];
         Rectangle toCntBB = toCnt.getBounds();
         Rectangle refBB = ref.getBounds();
         Rectangle inter = toCntBB.intersection(refBB);
-        int maxI = Math.max(inter.width, inter.height);
-        if (maxI < -3.0 * tol) {
-            return 0;
+        int minI = Math.min(inter.width, inter.height);
+        //Early stopping criterion
+        if (minI < -3.0 * maxTolTicks[maxTolTicks.length - 1]) {
+            return cnt;
         }
-        double cnt = 0;
         for (int i = 0; i < toCnt.npoints; i++) {
             int xA = toCnt.xpoints[i];
             int yA = toCnt.ypoints[i];
@@ -245,53 +184,88 @@ public class Metric_BL_eval {
             for (int j = 0; j < ref.npoints; j++) {
                 int xC = ref.xpoints[j];
                 int yC = ref.ypoints[j];
-//                minDist = Math.min(Math.abs(xC-xA)+Math.abs(yC-yA), minDist);
-                minDist = Math.min(Math.sqrt((xC - xA) * (xC - xA) + (yC - yA) * (yC - yA)), minDist);
-                if (minDist <= tol) {
-                    cnt += 1.0;
+//                minDist = Math.min(Math.sqrt((xC - xA) * (xC - xA) + (yC - yA) * (yC - yA)), minDist);
+                minDist = Math.min(Math.abs(xA-xC)+Math.abs(yA-yC), minDist);
+                if (minDist <= maxTolTicks[0]) {
                     break;
                 }
             }
-            if (minDist > tol && minDist < 3.0 * tol) {
-                cnt += (3.0 * tol - minDist) / (2.0 * tol);
+            for (int j = 0; j < cnt.length; j++) {
+                double tol = maxTolTicks[j];
+                if (minDist <= tol) {
+                    cnt[j]++;
+                }
+                if (minDist > tol && minDist < 3.0 * tol) {
+                    cnt[j] += (3.0 * tol - minDist) / (2.0 * tol);
+                }
             }
+        }
+        for (int i = 0; i < cnt.length; i++) {
+            cnt[i] /= toCnt.npoints;
         }
         return cnt;
     }
+    
 
-    private static double precision(Polygon reco, Polygon truth, double tol) {
-        return cntHits(reco, truth, tol) / reco.npoints;
-    }
-
-    private static double[] calcPrecision(Polygon[] polyReco, Polygon[] polyTruth, double[] tol) {
-        double[] prec = new double[polyReco.length];
-        double[][] C = new double[polyReco.length][polyTruth.length];
-        for (int i = 0; i < C.length; i++) {
-            double[] aC = C[i];
-            for (int j = 0; j < aC.length; j++) {
-                aC[j] = precision(polyReco[i], polyTruth[j], tol[j]);
+    private double[][] calcRecall(double[][] recall, Polygon[] polysRecoNorm, Polygon[] polysTruthNorm) {
+        for (int i = 0; i < maxTolTicks.length; i++) {
+            recall[i] = new double[polysTruthNorm.length];
+        }
+        for (int i = 0; i < polysTruthNorm.length; i++) {
+            Polygon polyTruthNormA = polysTruthNorm[i];
+            double[] cntHitsList = cntRelHitsList(polyTruthNormA, polysRecoNorm);
+            for (int j = 0; j < recall.length; j++) {
+                recall[j][i] = cntHitsList[j];
             }
         }
-        //Calculation of the BEST Alignment
-        while (true) {
-            int[] maxIdx = getMaxIdx(C);
-            if (maxIdx[0] < 0) {
-                break;
-            }
-            prec[maxIdx[0]] = C[maxIdx[0]][maxIdx[1]];
 
-            for (int i = 0; i < C.length; i++) {
-                C[i][maxIdx[1]] = 0.0;
+        return recall;
+    }
+
+    private double[] cntRelHitsList(Polygon toCnt, Polygon[] refL) {
+        double[] cnt = new double[maxTolTicks.length];
+        Rectangle toCntBB = toCnt.getBounds();
+        for (int i = 0; i < toCnt.npoints; i++) {
+            int xA = toCnt.xpoints[i];
+            int yA = toCnt.ypoints[i];
+            boolean match = false;
+            double minDist = Double.MAX_VALUE;
+            for (Polygon ref : refL) {
+                Rectangle refBB = ref.getBounds();
+                Rectangle inter = toCntBB.intersection(refBB);
+                int minI = Math.min(inter.width, inter.height);
+                //Early stopping criterion
+                if (minI < -3.0 * maxTolTicks[maxTolTicks.length - 1]) {
+                    continue;
+                }
+                for (int j = 0; j < ref.npoints; j++) {
+                    int xC = ref.xpoints[j];
+                    int yC = ref.ypoints[j];
+                    minDist = Math.min(Math.abs(xA-xC)+Math.abs(yA-yC), minDist);
+//                    minDist = Math.min(Math.sqrt((xC - xA) * (xC - xA) + (yC - yA) * (yC - yA)), minDist);
+                    if (minDist <= maxTolTicks[0]) {
+                        match = true;
+                        break;
+                    }
+                }
+                if (match) {
+                    break;
+                }
             }
-            for (int i = 0; i < C[0].length; i++) {
-                C[maxIdx[0]][i] = 0.0;
+
+            for (int j = 0; j < cnt.length; j++) {
+                double tol = maxTolTicks[j];
+                if (minDist <= tol) {
+                    cnt[j]++;
+                }
+                if (minDist > tol && minDist < 3.0 * tol) {
+                    cnt[j] += (3.0 * tol - minDist) / (2.0 * tol);
+                }
             }
         }
-        return prec;
+        for (int i = 0; i < cnt.length; i++) {
+            cnt[i] /= toCnt.npoints;
+        }
+        return cnt;
     }
-
-    private static double fmeas(double prec, double rec) {
-        return 2.0 * rec * prec / (rec + prec);
-    }
-
 }
