@@ -14,6 +14,10 @@ git clone https://github.com/Transkribus/TranskribusBaseLineMetricTool
 cd TranskribusBaseLineMetricTool
 mvn install
 ```
+a stand-alone tool is created at
+```
+target/TranskribusBaseLineMetricTool-0.0.1-jar-with-dependencies.jar
+```
 ### Running
 See source code of
 eu.transkribus.baselinemetrictool.Metric_BL_run
@@ -21,23 +25,15 @@ how the tool works.
 
 Use
 ```
-java -jar java -jar target/TranskribusBaseLineMetricTool-0.0.1-jar-with-dependencies.jar
+java -jar target/TranskribusBaseLineMetricTool-0.0.1-jar-with-dependencies.jar
 ```
-or
-```
-java -jar java -jar target/TranskribusBaseLineMetricTool-0.0.1-jar-with-dependencies.jar src/test/resources/truth.lst src/test/resources/reco.lst -p -tol -i src/test/resources/metrEx.png
-```
-to see an example application.
+see an example application (without parameters example-parameters are used).
 
 Use
 ```
-java -jar ~/.m2/repository/eu/transkribus/TranskribusBaseLineMetricTool/0.0.1/TranskribusBaseLineMetricTool-0.0.1-jar-with-dependencies.jar --help
-```
-or  
-```
 java -jar target/TranskribusBaseLineMetricTool-0.0.1-jar-with-dependencies.jar --help
 ```
-to use tool for other lists.
+to use the tool for other lists.
 
 ### Links
 - https://transkribus.eu/TranskribusBaseLineMetricTool/apidocs/index.html
