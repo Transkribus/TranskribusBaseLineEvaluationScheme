@@ -1,5 +1,5 @@
 # TranskribusBaseLineMetricTool
-A tool for computing the qualitiy of baseline tools towards groundtruth. TODO: more exactly...
+A tool for computing the qualitiy of baseline detection tools for more details see the following [draft](https://github.com/Transkribus/TranskribusBaseLineMetricTool/blob/master/line_metric_draft.pdf)
 
 [![Build Status](http://dbis-halvar.uibk.ac.at/jenkins/buildStatus/icon?job=TranskribusBaseLineMetricTool)](http://dbis-halvar.uibk.ac.at/jenkins/job/TranskribusBaseLineMetricTool)
 
