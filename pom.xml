@@ -59,7 +59,7 @@
         <maven.compiler.source>1.7</maven.compiler.source>
         <maven.compiler.target>1.7</maven.compiler.target>
     </properties>
-<!--    <build>
+   <build>
         <plugins>
             <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
@@ -84,5 +84,5 @@
                 </executions>
             </plugin> 
         </plugins>
-       </build> -->
+    </build> 
 </project>
