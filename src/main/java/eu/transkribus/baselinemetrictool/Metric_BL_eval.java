@@ -76,9 +76,9 @@ public class Metric_BL_eval {
         double[][] precision = new double[maxTolTicks.length][];
         double[][] recall = new double[maxTolTicks.length][];
         //Take care of degenerated scenarios
-        if (polyTruth == null || polyReco == null) {
-            if (polyTruth == null) {
-                if (polyReco == null) {
+        if (polyTruth == null || polyTruth.length == 0 || polyReco == null || polyReco.length == 0) {
+            if (polyTruth == null || polyTruth.length == 0) {
+                if (polyReco == null || polyReco.length == 0) {
                     for (int i = 0; i < maxTolTicks.length; i++) {
                         precision[i] = new double[]{1.0};
                         recall[i] = new double[]{1.0};

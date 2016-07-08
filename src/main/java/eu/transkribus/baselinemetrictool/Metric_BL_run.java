@@ -9,8 +9,11 @@ import eu.transkribus.baselinemetrictool.util.BaseLineMetricResult;
 import eu.transkribus.baselinemetrictool.util.Util;
 import java.awt.Polygon;
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -38,6 +41,8 @@ public class Metric_BL_run {
         options.addOption("tol", "tolerance", false, "graphical output of values for different tolerance thresholds");
         options.addOption("t", "threshold", false, "graphical output of thresholded values");
         options.addOption("i", "imagepath", true, "displays truth and reco baselines of first page in this image");
+        options.addOption("minT", "min tolerance val", true, "minimum tolerance value to be soncidered default is 10");
+        options.addOption("maxT", "max tolerance value", true, "maximum tolerance value to be soncidered default is 30");
     }
 
     private void help() {
@@ -71,7 +76,7 @@ public class Metric_BL_run {
         System.exit(0);
     }
 
-    public void run(String[] args) throws IOException {
+    public void run(String[] args) {
 
         CommandLine cmd = null;
         try {
@@ -93,6 +98,14 @@ public class Metric_BL_run {
             if (cmd.hasOption('i')) {
                 imagePath = cmd.getOptionValue('i');
             }
+            int minT = 10;
+            if (cmd.hasOption("minT")) {
+                minT = Integer.valueOf(cmd.getOptionValue("minT"));
+            }
+            int maxT = 30;
+            if (cmd.hasOption("maxT")) {
+                maxT = Integer.valueOf(cmd.getOptionValue("maxT"));
+            }
 
             //Parsing the input to create reco and truth baseline polygon lists
             List<String> argList = cmd.getArgList();
@@ -106,16 +119,22 @@ public class Metric_BL_run {
             ArrayList<String> listTruth = null;
             ArrayList<String> listReco = null;
 
-            if ((fileNameTruth.endsWith(".txt") && fileNameReco.endsWith(".txt")) || (fileNameTruth.endsWith(".xml") && fileNameReco.endsWith(".xml"))) {
+            if (fileNameTruth.endsWith(".txt") || fileNameTruth.endsWith(".xml") ) {
                 listTruth = new ArrayList<String>();
                 listTruth.add(fileNameTruth);
+            }
+            if (fileNameReco.endsWith(".txt") || fileNameReco.endsWith(".xml")) {
                 listReco = new ArrayList<String>();
                 listReco.add(fileNameReco);
             }
 
             if (fileNameTruth.endsWith(".lst") && fileNameReco.endsWith(".lst")) {
-                listTruth = Util.loadTextFile(fileNameTruth);
-                listReco = Util.loadTextFile(fileNameReco);
+                try{
+                    listTruth = Util.loadTextFile(fileNameTruth);
+                    listReco = Util.loadTextFile(fileNameReco);
+                }catch(IOException ex){
+                    throw new IllegalArgumentException("Reco and/or TruthFile Error.");
+                }
             }
 
             if (listReco == null || listTruth == null) {
@@ -134,11 +153,19 @@ public class Metric_BL_run {
             int numPolyReco = 0;
 
             for (int i = 0; i < polyPagesReco.length; i++) {
-                polyPagesTruth[i] = Util.getPolysFromFile(listTruth.get(i));
+                try{
+                    polyPagesTruth[i] = Util.getPolysFromFile(listTruth.get(i));
+                }catch(IOException ex){
+                    System.out.println(ex + "  " + listTruth.get(i));
+                }
                 if (polyPagesTruth[i] != null) {
                     numPolyTruth += polyPagesTruth[i].length;
                 }
-                polyPagesReco[i] = Util.getPolysFromFile(listReco.get(i));
+                try{
+                    polyPagesReco[i] = Util.getPolysFromFile(listReco.get(i));
+                }catch(IOException ex){
+                    System.out.println(ex + "  " + listReco.get(i));
+                }
                 if (polyPagesReco[i] != null) {
                     numPolyReco += polyPagesReco[i].length;
                 }
@@ -149,7 +176,7 @@ public class Metric_BL_run {
 
             //Evaluate the metric for the given reco and truth baseline polygons
             //Creation of an instance of the metric eval tool
-            Metric_BL_eval m_bl = new Metric_BL_eval();
+            Metric_BL_eval m_bl = new Metric_BL_eval(minT, maxT);
 
             //For each page the metric is evaluated
             for (int i = 0; i < polyPagesReco.length; i++) {
@@ -161,6 +188,9 @@ public class Metric_BL_run {
             //Getting the result structure
             BaseLineMetricResult res = m_bl.getRes();
 
+            
+            DecimalFormat df = new DecimalFormat( "##.####" );
+            
             //Show pagewise results if desired
             if (pagewise) {
                 ArrayList<Double> pageWiseRecall = res.getPageWiseRecall();
@@ -170,18 +200,18 @@ public class Metric_BL_run {
                     double pagePrecision = pageWisePrecision.get(i);
                     double pageFmeas = Util.fmeas(pagePrecision, pageRecall);
                     System.out.println("Page " + i);
-                    System.out.println("Avg Precision: " + pagePrecision);
-                    System.out.println("Avg Recall: " + pageRecall);
-                    System.out.println("Avg F-Measure: " + pageFmeas);
+                    System.out.println("Avg Precision: " + df.format(pagePrecision));
+                    System.out.println("Avg Recall: " + df.format(pageRecall));
+                    System.out.println("Avg F-Measure: " + df.format(pageFmeas));
                     System.out.println("");
                 }
             }
 
             System.out.println("");
             System.out.println("#######Final Evaluation#######");
-            System.out.println("Avg (over Pages) Avg Precision: " + res.getPrecision());
-            System.out.println("Avg (over Pages) Avg Recall: " + res.getRecall());
-            System.out.println("Avg (over Pages) Avg F-Measure: " + Util.fmeas(res.getPrecision(), res.getRecall()));
+            System.out.println("Avg (over Pages) Avg Precision: " + df.format(res.getPrecision()));
+            System.out.println("Avg (over Pages) Avg Recall: " + df.format(res.getRecall()));
+            System.out.println("Avg (over Pages) Avg F-Measure: " + df.format(Util.fmeas(res.getPrecision(), res.getRecall())));
 
             //Display of values for different tolerances
             if (toleranceDisplay) {
@@ -220,17 +250,87 @@ public class Metric_BL_run {
                 ser[2] = "F-Measure";
                 Chart chart = QuickChart.getChart("Tolerance-Chart", "Tolerance Value", "Metric Value", ser, m_bl.maxTolTicks, valsT);
                 // Show it
-                new SwingWrapper(chart).displayChart("TranskribusBaseLineMetricTool");
+                new SwingWrapper(chart).displayChart("TranskribusBaseLineMetricTool - ToleranceValue");
             }
 
             //Display of the plausi image
             if (!"".equals(imagePath)) {
-                Util.plotPlausi(imagePath, polyPagesTruth[0], polyPagesReco[0]);
+                try{
+                    Util.plotPlausi(imagePath, polyPagesTruth[0], polyPagesReco[0]);
+                }catch(IOException ex){
+                    System.out.println(ex + " " + imagePath);
+                }
             }
-            
+
             //Display of avg for thresholded values
-            if(thresholdDisplay){
-                //ToDo
+            if (thresholdDisplay) {
+                double[] thTicks = new double[101];
+                for (int i = 0; i < thTicks.length; i++) {
+                    thTicks[i] = 0.01 * i;
+                }
+                ArrayList<double[][]> pageWisePerDistTolTickPerLinePrecision = res.getPageWisePerDistTolTickPerLinePrecision();
+                ArrayList<double[][]> pageWisePerDistTolTickPerLineRecall = res.getPageWisePerDistTolTickPerLineRecall();
+
+                double[] tickPrec = new double[101];
+                double[] tickRec = new double[101];
+                double[] tickFmeas = new double[101];
+                
+                
+                for (int i = 0; i < thTicks.length; i++) {
+                    double tick = thTicks[i];
+
+                    for (double[][] aV : pageWisePerDistTolTickPerLinePrecision) {
+                        double pageTickPrec = 0.0;
+                        int cnt = 0;
+                        for (int j = 0; j < aV.length; j++) {
+                            double[] aVa = aV[j];
+                            for (int k = 0; k < aVa.length; k++) {
+                                cnt++;
+                                double aVal = aVa[k];
+                                if (aVal >= tick) {
+                                    pageTickPrec++;
+                                }
+                            }
+                        }
+                        pageTickPrec /= cnt;
+                        tickPrec[i] += pageTickPrec;
+                    }
+                    tickPrec[i] /= pageWisePerDistTolTickPerLinePrecision.size();
+
+                    for (double[][] aV : pageWisePerDistTolTickPerLineRecall) {
+                        double pageTickRec = 0.0;
+                        int cnt = 0;
+                        for (int j = 0; j < aV.length; j++) {
+                            double[] aVa = aV[j];
+                            for (int k = 0; k < aVa.length; k++) {
+                                cnt++;
+                                double aVal = aVa[k];
+                                if (aVal >= tick) {
+                                    pageTickRec++;
+                                }
+                            }
+                        }
+                        pageTickRec /= cnt;
+                        tickRec[i] += pageTickRec;
+                    }
+                    tickRec[i] /= pageWisePerDistTolTickPerLineRecall.size();
+                    
+                    tickFmeas[i] = Util.fmeas(tickPrec[i], tickRec[i]);
+                    
+                }
+                
+                double[][] serVals = new double[3][];
+                serVals[0] = tickRec;
+                serVals[1] = tickPrec;
+                serVals[2] = tickFmeas;
+                
+                String[] ser = new String[3];
+                ser[0] = "Recall";
+                ser[1] = "Precision";
+                ser[2] = "F-Measure";
+                Chart chart = QuickChart.getChart("Thersholded-Chart", "Threshold Value", "Metric Value", ser, thTicks, serVals);
+                // Show it
+                new SwingWrapper(chart).displayChart("TranskribusBaseLineMetricTool - Thresholded");
             }
         } catch (ParseException e) {
             help("Failed to parse comand line properties", e);
@@ -241,14 +341,16 @@ public class Metric_BL_run {
      * @param args the command line arguments
      */
     public static void main(String[] args) throws IOException {
-        args = new String[6];
-        args[0] = "src/test/resources/truth.lst";
-        args[1] = "src/test/resources/reco.lst";
-        args[2] = "-p";
-        args[3] = "-tol";
-        args[4] = "-i";
-        args[5] = "src/test/resources/metrEx.png";
-//        args = ("--help").split(" ");
+        
+//            args = new String[7];
+//            args[0] = "src/test/resources/truth.lst";
+//            args[1] = "src/test/resources/reco.lst";
+//            args[2] = "-p";
+//            args[3] = "-tol";
+//            args[4] = "-i";
+//            args[5] = "src/test/resources/metrEx.png";
+//            args[6] = "-t";
+        
         Metric_BL_run erp = new Metric_BL_run();
         erp.run(args);
     }

@@ -110,16 +110,21 @@ public class Util {
             ArrayList<org.primaresearch.maths.geometry.Polygon> baselines = new ArrayList<org.primaresearch.maths.geometry.Polygon>();
             Page aPage;
             try {
+                System.out.println(polyFileName);
                 aPage = XmlInputOutput.readPage(polyFileName);
                 if (aPage == null) {
                     System.out.println("Error while parsing xml-File.");
+                    return null;
                 }
                 List<Region> regionsSorted = aPage.getLayout().getRegionsSorted();
                 for (Region reg : regionsSorted) {
                     if (reg instanceof TextRegion) {
                         for (LowLevelTextObject tObj : ((TextRegion) reg).getTextObjectsSorted()) {
                             if (tObj instanceof TextLine) {
-                                baselines.add(((TextLine) tObj).getBaseline());
+                                org.primaresearch.maths.geometry.Polygon aBL = ((TextLine) tObj).getBaseline();
+                                if(aBL != null){
+                                    baselines.add(aBL);
+                                }
                             }
                         }
                     }
@@ -167,12 +172,15 @@ public class Util {
             int y1 = inPoly.ypoints[i - 1];
             int x2 = inPoly.xpoints[i];
             int y2 = inPoly.ypoints[i];
-            res.addPoint(x1, y1);
             int diffX = Math.abs(x2 - x1);
             int diffY = Math.abs(y2 - y1);
             if (Math.max(diffX, diffY) < 1) {
-                throw new IllegalArgumentException("Irregular Baseline");
+                if(i == inPoly.npoints - 1){
+                    res.addPoint(x2, y2);
+                }
+                continue;
             }
+            res.addPoint(x1, y1);
             if (diffX >= diffY) {
                 for (int j = 1; j < diffX; j++) {
                     int xN;
