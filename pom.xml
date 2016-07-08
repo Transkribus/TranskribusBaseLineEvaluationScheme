@@ -5,6 +5,14 @@
     <artifactId>TranskribusBaseLineMetricTool</artifactId>
     <version>0.0.2</version>
     <packaging>jar</packaging>
+    <repositories>
+        <!-- dea artifactory: -->		
+        <repository>
+            <id>dea-artifactory</id>
+            <name>dea-artifactory-releases</name>
+            <url>http://dbis-halvar.uibk.ac.at/artifactory/libs-release/</url>
+        </repository>
+    </repositories>
     <dependencies>
         <dependency>
             <groupId>org.primaresearch</groupId>

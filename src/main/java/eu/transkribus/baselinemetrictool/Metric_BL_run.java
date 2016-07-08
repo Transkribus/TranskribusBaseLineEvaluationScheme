@@ -12,8 +12,6 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
-import javax.swing.JFrame;
-import javax.swing.JPanel;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -354,5 +352,4 @@ public class Metric_BL_run {
         Metric_BL_run erp = new Metric_BL_run();
         erp.run(args);
     }
-
 }
