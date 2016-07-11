@@ -62,6 +62,18 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+    <distributionManagement>
+        <repository>
+            <id>dbis-halvar-artifactory</id>
+            <name>dbis-halvar-releases</name>
+            <url>http://dbis-halvar.uibk.ac.at/artifactory/libs-release-local</url>
+        </repository>
+        <site>
+            <id>website</id>
+            <name>transkribus.eu</name>
+            <url>scp://read01.uibk.ac.at/var/www/html/TranskribusBaseLineMetricTool</url>
+        </site>
+    </distributionManagement>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.7</maven.compiler.source>
@@ -90,7 +102,55 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin> 
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.3.2</version>
+                <configuration>
+                    <showDeprecation>true</showDeprecation>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>2.10.3</version>
+                <configuration>
+                    <additionalparam>-Xdoclint:none</additionalparam>
+                    <show>private</show>
+                    <nohelp>true</nohelp>
+                    <!-- 					<failOnError>false</failOnError>				 -->
+                </configuration>
+            </plugin>	
         </plugins>
-    </build> 
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-site-plugin</artifactId>
+                    <version>3.5.1</version>
+                    <dependencies>
+                        <dependency><!-- add support for ssh/scp -->
+                            <groupId>org.apache.maven.wagon</groupId>
+                            <artifactId>wagon-ssh</artifactId>
+                            <version>1.0</version>
+                        </dependency>
+                    </dependencies>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+    <reporting>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>2.10.3</version>
+                <configuration>
+                    <show>public</show>
+                    <additionalparam>-Xdoclint:none</additionalparam>
+                </configuration>
+            </plugin>
+        </plugins>
+    </reporting>
 </project>
