@@ -394,17 +394,17 @@ public class Metric_BL_run {
      */
     public static void main(String[] args) throws IOException {
 
-        args = new String[10];
-        args[0] = "src/test/resources/truth.lst";
-        args[1] = "src/test/resources/reco.lst";
-        args[2] = "-tol";
-        args[3] = "-i";
-        args[4] = "src/test/resources/metrEx.png";
-        args[5] = "-t";
-        args[6] = "-p";
-        args[7] = "-tTF";
-        args[8] = "0.8";
-        args[9] = "-r";
+//        args = new String[10];
+//        args[0] = "src/test/resources/truth.lst";
+//        args[1] = "src/test/resources/reco.lst";
+//        args[2] = "-tol";
+//        args[3] = "-i";
+//        args[4] = "src/test/resources/metrEx.png";
+//        args[5] = "-t";
+//        args[6] = "-p";
+//        args[7] = "-tTF";
+//        args[8] = "0.8";
+//        args[9] = "-r";
 
         Metric_BL_run erp = new Metric_BL_run();
         erp.run(args);
