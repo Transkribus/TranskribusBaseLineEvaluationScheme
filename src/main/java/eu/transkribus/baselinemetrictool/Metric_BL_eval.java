@@ -80,19 +80,19 @@ public class Metric_BL_eval {
             if (polyTruth == null || polyTruth.length == 0) {
                 if (polyReco == null || polyReco.length == 0) {
                     for (int i = 0; i < maxTolTicks.length; i++) {
-                        precision[i] = new double[]{1.0};
-                        recall[i] = new double[]{1.0};
+                        precision[i] = null;
+                        recall[i] = null;
                     }
                 } else {
                     for (int i = 0; i < maxTolTicks.length; i++) {
-                        precision[i] = new double[]{0.0};
-                        recall[i] = new double[]{1.0};
+                        precision[i] = new double[polyReco.length];
+                        recall[i] = null;
                     }
                 }
             } else {
                 for (int i = 0; i < maxTolTicks.length; i++) {
-                    precision[i] = new double[]{1.0};
-                    recall[i] = new double[]{0.0};
+                    precision[i] = null;
+                    recall[i] = new double[polyTruth.length];
                 }
             }
 

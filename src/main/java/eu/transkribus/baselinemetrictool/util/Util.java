@@ -5,6 +5,7 @@ package eu.transkribus.baselinemetrictool.util;
 /// Created:    21.04.2016  13:25:07
 /// Encoding:   UTF-8
 ////////////////////////////////////////////////
+import de.erichseifert.vectorgraphics2d.SVGGraphics2D;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -17,11 +18,13 @@ import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -91,7 +94,41 @@ public class Util {
         return res;
     }
 
-    public static Polygon[] getPolysFromFile(String polyFileName) throws IOException {
+    public static List<Polygon> getRegionPolysFromFile(String fileName) {
+        if (fileName.endsWith(".xml")) {
+            Page aPage;
+            try {
+                List<Polygon> res = new ArrayList<>();
+                aPage = XmlInputOutput.readPage(fileName);
+                if (aPage == null) {
+                    System.out.println("Error while parsing xml-File.");
+                    return null;
+                }
+                List<Region> regionsSorted = aPage.getLayout().getRegionsSorted();
+                for (Region reg : regionsSorted) {
+                    if (reg instanceof TextRegion) {
+                        org.primaresearch.maths.geometry.Polygon regPoly = ((TextRegion) reg).getCoords();
+                        if(regPoly != null){
+                            Polygon aPoly = new Polygon();
+                            for (int j = 0; j < regPoly.getSize(); j++) {
+                                Point aPt = regPoly.getPoint(j);
+                                aPoly.addPoint(aPt.x, aPt.y);
+                            }
+                            res.add(aPoly);
+                        }
+                    }
+                }
+                return res;
+            }catch (UnsupportedFormatVersionException ex) {
+                System.out.println(ex);
+                System.out.println("Error while parsing xml-File.");
+                Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        return null;
+    }
+
+    public static Polygon[] getPolysFromFile(String polyFileName, List<Polygon> regionPolys) throws IOException {
 
         if (polyFileName.endsWith(".txt")) {
             ArrayList<String> polyString = Util.loadTextFile(polyFileName);
@@ -99,12 +136,15 @@ public class Util {
                 return null;
             }
 
-            Polygon[] res = new Polygon[polyString.size()];
+            List<Polygon> res = new ArrayList<Polygon>();
             for (int i = 0; i < polyString.size(); i++) {
                 String polyStringA = polyString.get(i);
-                res[i] = parseString(polyStringA);
+                Polygon aPoly = parseString(polyStringA);
+                if(isContained(aPoly, regionPolys)){
+                    res.add(aPoly);
+                }
             }
-            return res;
+            return asArray(res);
         }
         if (polyFileName.endsWith(".xml")) {
             ArrayList<org.primaresearch.maths.geometry.Polygon> baselines = new ArrayList<org.primaresearch.maths.geometry.Polygon>();
@@ -122,24 +162,26 @@ public class Util {
                         for (LowLevelTextObject tObj : ((TextRegion) reg).getTextObjectsSorted()) {
                             if (tObj instanceof TextLine) {
                                 org.primaresearch.maths.geometry.Polygon aBL = ((TextLine) tObj).getBaseline();
-                                if(aBL != null){
+                                if (aBL != null) {
                                     baselines.add(aBL);
                                 }
                             }
                         }
                     }
                 }
-                Polygon[] res = new Polygon[baselines.size()];
-                for (int i = 0; i < res.length; i++) {
+                List<Polygon> res = new ArrayList<Polygon>();
+                for (int i = 0; i < baselines.size(); i++) {
                     org.primaresearch.maths.geometry.Polygon aPoly = baselines.get(i);
                     Polygon aPolyAWT = new Polygon();
                     for (int j = 0; j < aPoly.getSize(); j++) {
                         Point aPt = aPoly.getPoint(j);
                         aPolyAWT.addPoint(aPt.x, aPt.y);
                     }
-                    res[i] = aPolyAWT;
+                    if(isContained(aPolyAWT, regionPolys)){
+                        res.add(aPolyAWT);
+                    }
                 }
-                return res;
+                return asArray(res);
 
             } catch (UnsupportedFormatVersionException ex) {
                 System.out.println(ex);
@@ -175,7 +217,7 @@ public class Util {
             int diffX = Math.abs(x2 - x1);
             int diffY = Math.abs(y2 - y1);
             if (Math.max(diffX, diffY) < 1) {
-                if(i == inPoly.npoints - 1){
+                if (i == inPoly.npoints - 1) {
                     res.addPoint(x2, y2);
                 }
                 continue;
@@ -228,28 +270,99 @@ public class Util {
         return res;
     }
 
-    public static void plotPlausi(String pathToImg, Polygon[] polysTruth, Polygon[] polysReco) throws IOException {
+    public static void plotPlausi(String pathToImg, Polygon[] polysTruth, Polygon[] polysReco, BaseLineMetricResult res, double thresTP, boolean save) throws IOException {
+
+        boolean[][] specificPageTrueFalseConstellation;
+        if (thresTP > 0) {
+            specificPageTrueFalseConstellation = res.getSpecificPageTrueFalseConstellation(0, thresTP);
+        } else {
+            specificPageTrueFalseConstellation = new boolean[2][];
+            specificPageTrueFalseConstellation[0] = new boolean[polysReco.length];
+            Arrays.fill(specificPageTrueFalseConstellation[0], true);
+            specificPageTrueFalseConstellation[1] = new boolean[polysTruth.length];
+            Arrays.fill(specificPageTrueFalseConstellation[1], true);
+        }
+
         BufferedImage img = ImageIO.read(new File(pathToImg));
         Graphics2D graphics = img.createGraphics();
 
         graphics.setColor(new Color(0F / 255, 0F / 255, 255F / 255));
-        graphics.setStroke(new BasicStroke(2f));
         if (polysTruth != null) {
+            boolean[] hypConst = specificPageTrueFalseConstellation[1];
+            int cnt = 0;
             for (Polygon truth : polysTruth) {
+                if (hypConst[cnt]) {
+                    graphics.setStroke(new BasicStroke(3f));
+                } else {
+                    graphics.setStroke(new BasicStroke(3f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[]{4}, 0));
+                }
                 graphics.drawPolyline(truth.xpoints, truth.ypoints, truth.npoints);
                 for (int i = 0; i < truth.npoints; i++) {
                     graphics.fillRect(truth.xpoints[i] - 3, truth.ypoints[i] - 3, 7, 7);
                 }
+                cnt++;
             }
         }
         graphics.setColor(new Color(255F / 255, 0F / 255, 0F / 255));
-        graphics.setStroke(new BasicStroke(2f));
         if (polysReco != null) {
+            boolean[] hypGT = specificPageTrueFalseConstellation[0];
+            int cnt = 0;
             for (Polygon reco : polysReco) {
+                if (hypGT[cnt]) {
+                    graphics.setStroke(new BasicStroke(3f));
+                } else {
+                    graphics.setStroke(new BasicStroke(3f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[]{4}, 0));
+                }
                 graphics.drawPolyline(reco.xpoints, reco.ypoints, reco.npoints);
                 for (int i = 0; i < reco.npoints; i++) {
                     graphics.fillRect(reco.xpoints[i] - 3, reco.ypoints[i] - 3, 7, 7);
                 }
+                cnt++;
+            }
+        }
+
+        if (save) {
+            SVGGraphics2D g = new SVGGraphics2D(0.0, 0.0, img.getWidth(), img.getHeight());
+            g.drawImage(img, null, 0, 0);
+            g.setColor(new Color(0F / 255, 0F / 255, 255F / 255));
+            if (polysTruth != null) {
+                boolean[] hypConst = specificPageTrueFalseConstellation[1];
+                int cnt = 0;
+                for (Polygon truth : polysTruth) {
+                    if (hypConst[cnt]) {
+                        g.setStroke(new BasicStroke(3f));
+                    } else {
+                        g.setStroke(new BasicStroke(3f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[]{4}, 0));
+                    }
+                    g.drawPolyline(truth.xpoints, truth.ypoints, truth.npoints);
+                    for (int i = 0; i < truth.npoints; i++) {
+                        g.fillRect(truth.xpoints[i] - 3, truth.ypoints[i] - 3, 7, 7);
+                    }
+                    cnt++;
+                }
+            }
+            g.setColor(new Color(255F / 255, 0F / 255, 0F / 255));
+            if (polysReco != null) {
+                boolean[] hypGT = specificPageTrueFalseConstellation[0];
+                int cnt = 0;
+                for (Polygon reco : polysReco) {
+                    if (hypGT[cnt]) {
+                        g.setStroke(new BasicStroke(3f));
+                    } else {
+                        g.setStroke(new BasicStroke(3f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[]{4}, 0));
+                    }
+                    g.drawPolyline(reco.xpoints, reco.ypoints, reco.npoints);
+                    for (int i = 0; i < reco.npoints; i++) {
+                        g.fillRect(reco.xpoints[i] - 3, reco.ypoints[i] - 3, 7, 7);
+                    }
+                    cnt++;
+                }
+            }
+            FileOutputStream file = new FileOutputStream("plausi.svg");
+            try {
+                file.write(g.getBytes());
+            } finally {
+                file.close();
             }
         }
 
@@ -260,6 +373,33 @@ public class Util {
 //        f.setLocationRelativeTo(null);
         f.setVisible(true);
 
+    }
+
+    private static Polygon[] asArray(List<Polygon> in) {
+        if(in == null){
+            return null;
+        }
+        Polygon[] res = new Polygon[in.size()];
+        for (int i = 0; i < res.length; i++) {
+            res[i] = in.get(i);
+        }
+        return res;
+    }
+
+    private static boolean isContained(Polygon bL, List<Polygon> regionPolys) {
+        if(regionPolys == null){
+            return true;
+        }
+        for (int i = 0; i < bL.npoints; i++) {
+            int aX = bL.xpoints[i];
+            int aY = bL.ypoints[i];
+            for (Polygon aRP : regionPolys) {
+                if(aRP.contains(aX, aY)){
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static class BuffPanel extends JPanel {
@@ -277,14 +417,14 @@ public class Util {
             int height = gd.getDisplayMode().getHeight();
             int widthImg = image.getWidth(this);
             int heightImg = image.getHeight(this);
-            
-            double sW = (double)widthImg / width;
-            double sH = (double)heightImg / height;
-            
+
+            double sW = (double) widthImg / width;
+            double sH = (double) heightImg / height;
+
             double scale = Math.max(sH, sW);
             scale = Math.max(scale, 1.0);
-            
-            return new Dimension((int)(widthImg/scale), (int)(heightImg/scale));
+
+            return new Dimension((int) (widthImg / scale), (int) (heightImg / scale));
         }
 
         @Override
@@ -295,6 +435,9 @@ public class Util {
     }
 
     public static double fmeas(double prec, double rec) {
+        if (prec == 0 && rec == 0) {
+            return 0.0;
+        }
         return 2.0 * rec * prec / (rec + prec);
     }
 
