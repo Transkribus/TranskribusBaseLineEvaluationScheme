@@ -463,9 +463,10 @@ public class Util {
         if (regionPolys == null) {
             return true;
         }
-        for (int i = 0; i < bL.npoints; i++) {
-            int aX = bL.xpoints[i];
-            int aY = bL.ypoints[i];
+        Polygon normDesDist = normDesDist(bL, 10);
+        for (int i = 0; i < normDesDist.npoints; i++) {
+            int aX = normDesDist.xpoints[i];
+            int aY = normDesDist.ypoints[i];
             for (Polygon aRP : regionPolys) {
                 if (aRP.contains(aX, aY)) {
                     return true;
