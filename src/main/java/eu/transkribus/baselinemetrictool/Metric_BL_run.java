@@ -20,6 +20,7 @@ import org.apache.commons.cli.ParseException;
 import org.knowm.xchart.QuickChart;
 import org.knowm.xchart.SwingWrapper;
 import org.knowm.xchart.internal.chartpart.Chart;
+import org.primaresearch.io.xml.XmlModelAndValidatorProvider;
 
 /**
  * Desciption of Metric_run
@@ -77,7 +78,7 @@ public class Metric_BL_run {
         System.exit(0);
     }
 
-    public void run(String[] args) {
+    public void run(String[] args) throws XmlModelAndValidatorProvider.NoSchemasException {
 
         CommandLine cmd = null;
         try {
@@ -99,11 +100,13 @@ public class Metric_BL_run {
             if (cmd.hasOption('i')) {
                 imagePath = cmd.getOptionValue('i');
             }
-            int minT = 10;
+//            int minT = 10;
+            int minT = -1;
             if (cmd.hasOption("minT")) {
                 minT = Integer.valueOf(cmd.getOptionValue("minT"));
             }
-            int maxT = 30;
+//            int maxT = 30;
+            int maxT = -1;
             if (cmd.hasOption("maxT")) {
                 maxT = Integer.valueOf(cmd.getOptionValue("maxT"));
             }
@@ -216,7 +219,7 @@ public class Metric_BL_run {
                     double pageFmeas = Util.fmeas(pagePrecision, pageRecall);
                     System.out.println("Page " + i);
                     System.out.println("Avg precision: " + df.format(pagePrecision));
-                    System.out.println("Avg pecall: " + df.format(pageRecall));
+                    System.out.println("Avg recall: " + df.format(pageRecall));
                     System.out.println("Avg f-measure: " + df.format(pageFmeas));
                     if (thresTP > 0.0) {
                         System.out.println("Number of true hypothesis lines for avg precision threshold of " + df.format(thresTP) + " is: " + pageWiseTrueFalsePositives[0][i]);
@@ -258,42 +261,47 @@ public class Metric_BL_run {
 
             //Display of values for different tolerances
             if (toleranceDisplay) {
-                double[] tolWiseRecall = new double[m_bl.maxTolTicks.length];
-                double[] tolWisePrecision = new double[m_bl.maxTolTicks.length];
-                double[] tolWiseFmeas = new double[m_bl.maxTolTicks.length];
+                if(minT >= 0){
+                    double[] tolWiseRecall = new double[m_bl.getMaxTols().length];
+                    double[] tolWisePrecision = new double[m_bl.getMaxTols().length];
+                    double[] tolWiseFmeas = new double[m_bl.getMaxTols().length];
 
-                ArrayList<double[]> pageWisePerDistTolTickPrecision = res.getPageWisePerDistTolTickPrecision();
-                for (double[] aVec : pageWisePerDistTolTickPrecision) {
-                    for (int i = 0; i < aVec.length; i++) {
-                        tolWisePrecision[i] += aVec[i];
+                    ArrayList<double[]> pageWisePerDistTolTickPrecision = res.getPageWisePerDistTolTickPrecision();
+                    for (double[] aVec : pageWisePerDistTolTickPrecision) {
+                        for (int i = 0; i < aVec.length; i++) {
+                            tolWisePrecision[i] += aVec[i];
+                        }
                     }
-                }
-                for (int i = 0; i < tolWisePrecision.length; i++) {
-                    tolWisePrecision[i] /= pageWisePerDistTolTickPrecision.size();
-                }
-
-                ArrayList<double[]> pageWisePerDistTolTickRecall = res.getPageWisePerDistTolTickRecall();
-                for (double[] aVec : pageWisePerDistTolTickRecall) {
-                    for (int i = 0; i < aVec.length; i++) {
-                        tolWiseRecall[i] += aVec[i];
+                    for (int i = 0; i < tolWisePrecision.length; i++) {
+                        tolWisePrecision[i] /= pageWisePerDistTolTickPrecision.size();
                     }
-                }
-                for (int i = 0; i < tolWiseRecall.length; i++) {
-                    tolWiseRecall[i] /= pageWisePerDistTolTickRecall.size();
-                    tolWiseFmeas[i] = Util.fmeas(tolWisePrecision[i], tolWiseRecall[i]);
-                }
 
-                double[][] valsT = new double[3][];
-                valsT[0] = tolWiseRecall;
-                valsT[1] = tolWisePrecision;
-                valsT[2] = tolWiseFmeas;
-                String[] ser = new String[3];
-                ser[0] = "Recall";
-                ser[1] = "Precision";
-                ser[2] = "F-Measure";
-                Chart chart = QuickChart.getChart("Tolerance-Chart", "Tolerance Value", "Metric Value (avg over pages)", ser, m_bl.maxTolTicks, valsT);
-                // Show it
-                new SwingWrapper(chart).displayChart("TranskribusBaseLineMetricTool - ToleranceValue");
+                    ArrayList<double[]> pageWisePerDistTolTickRecall = res.getPageWisePerDistTolTickRecall();
+                    for (double[] aVec : pageWisePerDistTolTickRecall) {
+                        for (int i = 0; i < aVec.length; i++) {
+                            tolWiseRecall[i] += aVec[i];
+                        }
+                    }
+                    for (int i = 0; i < tolWiseRecall.length; i++) {
+                        tolWiseRecall[i] /= pageWisePerDistTolTickRecall.size();
+                        tolWiseFmeas[i] = Util.fmeas(tolWisePrecision[i], tolWiseRecall[i]);
+                    }
+
+                    double[][] valsT = new double[3][];
+                    valsT[0] = tolWiseRecall;
+                    valsT[1] = tolWisePrecision;
+                    valsT[2] = tolWiseFmeas;
+                    String[] ser = new String[3];
+                    ser[0] = "Recall";
+                    ser[1] = "Precision";
+                    ser[2] = "F-Measure";
+                    Chart chart = QuickChart.getChart("Tolerance-Chart", "Tolerance Value", "Metric Value (avg over pages)", ser, m_bl.getMaxTols(), valsT);
+                    // Show it
+                    new SwingWrapper(chart).displayChart("TranskribusBaseLineMetricTool - ToleranceValue");
+                }else{
+                    System.out.println("The Tolerance-Chart is not available for dynamic tolerance value computation! ");
+                }
+                
             }
 
             //Display of the plausi image
@@ -392,7 +400,7 @@ public class Metric_BL_run {
     /**
      * @param args the command line arguments
      */
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, XmlModelAndValidatorProvider.NoSchemasException {
 
 //        args = new String[10];
 //        args[0] = "src/test/resources/truth.lst";

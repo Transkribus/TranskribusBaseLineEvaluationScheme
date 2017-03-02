@@ -20,41 +20,48 @@ import java.awt.Rectangle;
  */
 public class Metric_BL_eval {
 
-    public double[] maxTolTicks;
+    private double[] maxTols;
     private int desPolyTickDist;
     private BaseLineMetricResult res;
+    
+    
+    private double[][] truthLineTols;
+    private double relTol = 0.25;
+    
 
     /**
-     * Default constructor with minTol = 10, maxTol = 30 and desPolyTickDist = 5 .
+     * Default constructor with minTol = 10, maxTol = 30 and desPolyTickDist = 5
+     * .
      */
     public Metric_BL_eval() {
-        maxTolTicks = new double[30 - 10 + 1];
-        for (int i = 0; i < maxTolTicks.length; i++) {
-            maxTolTicks[i] = 10 + i;
+        maxTols = new double[30 - 10 + 1];
+        for (int i = 0; i < maxTols.length; i++) {
+            maxTols[i] = 10 + i;
         }
         res = new BaseLineMetricResult();
         desPolyTickDist = 5;
     }
-    
+
     /**
-     * 
+     *
      * @param minTol - MINIMUM distance tolerance which is not penalized
      * @param maxTol - MAXIMUM distance tolerance which is not penalized
      */
     public Metric_BL_eval(int minTol, int maxTol) {
-        maxTolTicks = new double[maxTol - minTol + 1];
-        for (int i = 0; i < maxTolTicks.length; i++) {
-            maxTolTicks[i] = minTol + i;
+        maxTols = new double[maxTol - minTol + 1];
+        for (int i = 0; i < maxTols.length; i++) {
+            maxTols[i] = minTol + i;
         }
         res = new BaseLineMetricResult();
         desPolyTickDist = 5;
     }
-    
+
     /**
-     * 
+     *
      * @param minTol - MINIMUM distance tolerance which is not penalized
      * @param maxTol - MAXIMUM distance tolerance which is not penalized
-     * @param desPolyTickDist - Desired distance of points of the baseline polygons
+     * @param desPolyTickDist - Desired distance of points of the baseline
+     * polygons
      */
     public Metric_BL_eval(int minTol, int maxTol, int desPolyTickDist) {
         this(minTol, maxTol);
@@ -73,24 +80,28 @@ public class Metric_BL_eval {
      * @param polyReco Array of RECO Polygons corresponding to a single page
      */
     public void calcMetricForPageBaseLinePolys(Polygon[] polyTruth, Polygon[] polyReco) {
-        double[][] precision = new double[maxTolTicks.length][];
-        double[][] recall = new double[maxTolTicks.length][];
+
+        
+        
+        
+        double[][] precision = new double[maxTols.length][];
+        double[][] recall = new double[maxTols.length][];
         //Take care of degenerated scenarios
         if (polyTruth == null || polyTruth.length == 0 || polyReco == null || polyReco.length == 0) {
             if (polyTruth == null || polyTruth.length == 0) {
                 if (polyReco == null || polyReco.length == 0) {
-                    for (int i = 0; i < maxTolTicks.length; i++) {
+                    for (int i = 0; i < maxTols.length; i++) {
                         precision[i] = null;
                         recall[i] = null;
                     }
                 } else {
-                    for (int i = 0; i < maxTolTicks.length; i++) {
+                    for (int i = 0; i < maxTols.length; i++) {
                         precision[i] = new double[polyReco.length];
                         recall[i] = null;
                     }
                 }
             } else {
-                for (int i = 0; i < maxTolTicks.length; i++) {
+                for (int i = 0; i < maxTols.length; i++) {
                     precision[i] = null;
                     recall[i] = new double[polyTruth.length];
                 }
@@ -101,6 +112,19 @@ public class Metric_BL_eval {
             Polygon[] polysTruthNorm = Util.normDesDist(polyTruth, desPolyTickDist);
             Polygon[] polysRecoNorm = Util.normDesDist(polyReco, desPolyTickDist);
 
+            truthLineTols = new double[polysTruthNorm.length][];
+            if (maxTols[0] < 0) {
+                double[] tolsCalc = Util.calcTols(polysTruthNorm, desPolyTickDist, 250, relTol);
+                for (int i = 0; i < truthLineTols.length; i++) {
+                    truthLineTols[i] = new double[1];
+                    truthLineTols[i][0] = tolsCalc[i];
+                }
+            }else{
+                for (int i = 0; i < polysTruthNorm.length; i++) {
+                    truthLineTols[i] = maxTols;
+                }
+            }
+
             //for each truthPoly calculate the recall values for all tolerances
             recall = calcRecall(recall, polysRecoNorm, polysTruthNorm);
             //for each recoPoly calculate the precission values for all tolerances
@@ -108,19 +132,19 @@ public class Metric_BL_eval {
         }
         res.addPerDistTolTickPerLinePrecision(precision);
         res.addPerDistTolTickPerLineRecall(recall);
+        truthLineTols = null;
     }
-    
-    
+
     private double[][] calcPrecision(double[][] precision, Polygon[] polyRecoNorm, Polygon[] polyTruthNorm) {
         //initialize precision values
-        for (int i = 0; i < maxTolTicks.length; i++) {
+        for (int i = 0; i < maxTols.length; i++) {
             precision[i] = new double[polyRecoNorm.length];
         }
-        
-        double[][][] C = new double[maxTolTicks.length][polyRecoNorm.length][polyTruthNorm.length];
+
+        double[][][] C = new double[maxTols.length][polyRecoNorm.length][polyTruthNorm.length];
         for (int i = 0; i < polyRecoNorm.length; i++) {
             for (int j = 0; j < polyTruthNorm.length; j++) {
-                double[] cntRelHits = cntRelHits(polyRecoNorm[i], polyTruthNorm[j]);
+                double[] cntRelHits = cntRelHits(polyRecoNorm[i], polyTruthNorm[j], truthLineTols[j]);
                 for (int k = 0; k < cntRelHits.length; k++) {
                     double cntRelHit = cntRelHits[k];
                     C[k][i][j] = cntRelHit;
@@ -147,7 +171,7 @@ public class Metric_BL_eval {
         }
         return precision;
     }
-    
+
     private int[] getMaxIdx(double[][] C) {
         double mV = 0.0;
         int maxRow = -1;
@@ -166,15 +190,15 @@ public class Metric_BL_eval {
         }
         return new int[]{maxRow, maxCol};
     }
-    
-    private  double[] cntRelHits(Polygon toCnt, Polygon ref) {
-        double[] cnt = new double[maxTolTicks.length];
+
+    private double[] cntRelHits(Polygon toCnt, Polygon ref, double[] tols) {
+        double[] cnt = new double[tols.length];
         Rectangle toCntBB = toCnt.getBounds();
         Rectangle refBB = ref.getBounds();
         Rectangle inter = toCntBB.intersection(refBB);
         int minI = Math.min(inter.width, inter.height);
         //Early stopping criterion
-        if (minI < -3.0 * maxTolTicks[maxTolTicks.length - 1]) {
+        if (minI < -3.0 * tols[tols.length - 1]) {
             return cnt;
         }
         for (int i = 0; i < toCnt.npoints; i++) {
@@ -185,13 +209,13 @@ public class Metric_BL_eval {
                 int xC = ref.xpoints[j];
                 int yC = ref.ypoints[j];
 //                minDist = Math.min(Math.sqrt((xC - xA) * (xC - xA) + (yC - yA) * (yC - yA)), minDist);
-                minDist = Math.min(Math.abs(xA-xC)+Math.abs(yA-yC), minDist);
-                if (minDist <= maxTolTicks[0]) {
+                minDist = Math.min(Math.abs(xA - xC) + Math.abs(yA - yC), minDist);
+                if (minDist <= tols[0]) {
                     break;
                 }
             }
             for (int j = 0; j < cnt.length; j++) {
-                double tol = maxTolTicks[j];
+                double tol = tols[j];
                 if (minDist <= tol) {
                     cnt[j]++;
                 }
@@ -205,15 +229,14 @@ public class Metric_BL_eval {
         }
         return cnt;
     }
-    
 
     private double[][] calcRecall(double[][] recall, Polygon[] polysRecoNorm, Polygon[] polysTruthNorm) {
-        for (int i = 0; i < maxTolTicks.length; i++) {
+        for (int i = 0; i < maxTols.length; i++) {
             recall[i] = new double[polysTruthNorm.length];
         }
         for (int i = 0; i < polysTruthNorm.length; i++) {
             Polygon polyTruthNormA = polysTruthNorm[i];
-            double[] cntHitsList = cntRelHitsList(polyTruthNormA, polysRecoNorm);
+            double[] cntHitsList = cntRelHitsList(polyTruthNormA, polysRecoNorm, truthLineTols[i]);
             for (int j = 0; j < recall.length; j++) {
                 recall[j][i] = cntHitsList[j];
             }
@@ -222,8 +245,8 @@ public class Metric_BL_eval {
         return recall;
     }
 
-    private double[] cntRelHitsList(Polygon toCnt, Polygon[] refL) {
-        double[] cnt = new double[maxTolTicks.length];
+    private double[] cntRelHitsList(Polygon toCnt, Polygon[] refL, double[] tols) {
+        double[] cnt = new double[tols.length];
         Rectangle toCntBB = toCnt.getBounds();
         for (int i = 0; i < toCnt.npoints; i++) {
             int xA = toCnt.xpoints[i];
@@ -235,15 +258,15 @@ public class Metric_BL_eval {
                 Rectangle inter = toCntBB.intersection(refBB);
                 int minI = Math.min(inter.width, inter.height);
                 //Early stopping criterion
-                if (minI < -3.0 * maxTolTicks[maxTolTicks.length - 1]) {
+                if (minI < -3.0 * tols[tols.length - 1]) {
                     continue;
                 }
                 for (int j = 0; j < ref.npoints; j++) {
                     int xC = ref.xpoints[j];
                     int yC = ref.ypoints[j];
-                    minDist = Math.min(Math.abs(xA-xC)+Math.abs(yA-yC), minDist);
+                    minDist = Math.min(Math.abs(xA - xC) + Math.abs(yA - yC), minDist);
 //                    minDist = Math.min(Math.sqrt((xC - xA) * (xC - xA) + (yC - yA) * (yC - yA)), minDist);
-                    if (minDist <= maxTolTicks[0]) {
+                    if (minDist <= tols[0]) {
                         match = true;
                         break;
                     }
@@ -254,7 +277,7 @@ public class Metric_BL_eval {
             }
 
             for (int j = 0; j < cnt.length; j++) {
-                double tol = maxTolTicks[j];
+                double tol = tols[j];
                 if (minDist <= tol) {
                     cnt[j]++;
                 }
@@ -268,4 +291,9 @@ public class Metric_BL_eval {
         }
         return cnt;
     }
+
+    public double[] getMaxTols() {
+        return maxTols;
+    }
+    
 }

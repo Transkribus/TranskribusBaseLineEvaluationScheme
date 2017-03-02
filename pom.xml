@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>eu.transkribus</groupId>
     <artifactId>TranskribusBaseLineMetricTool</artifactId>
-    <version>0.0.3</version>
+    <version>0.0.4</version>
     <packaging>jar</packaging>
     <repositories>
         <!-- dea artifactory: -->		
@@ -17,19 +17,19 @@
         <dependency>
             <groupId>org.primaresearch</groupId>
             <artifactId>PrimaDla</artifactId>
-            <version>15-10-2013</version>
+            <version>2017-03-01</version>
             <type>jar</type>
         </dependency>
         <dependency>
             <groupId>org.primaresearch</groupId>
             <artifactId>PrimaIo</artifactId>
-            <version>15-10-2013</version>
+            <version>2017-03-01</version>
             <type>jar</type>
         </dependency>
         <dependency>
             <groupId>org.primaresearch</groupId>
             <artifactId>PrimaMaths</artifactId>
-            <version>15-10-2013</version>
+            <version>2017-03-01</version>
             <type>jar</type>
         </dependency>
         <dependency>
@@ -47,7 +47,7 @@
         <dependency>
             <groupId>org.primaresearch</groupId>
             <artifactId>PrimaBasic</artifactId>
-            <version>15-10-2013</version>
+            <version>2017-03-01</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>

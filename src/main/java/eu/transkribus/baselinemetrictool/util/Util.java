@@ -14,6 +14,7 @@ import java.awt.Graphics2D;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.Polygon;
+import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.File;
@@ -32,12 +33,13 @@ import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import org.primaresearch.dla.page.Page;
-import org.primaresearch.dla.page.io.xml.XmlInputOutput;
+import org.primaresearch.dla.page.io.xml.PageXmlInputOutput;
 import org.primaresearch.dla.page.layout.physical.Region;
 import org.primaresearch.dla.page.layout.physical.text.LowLevelTextObject;
 import org.primaresearch.dla.page.layout.physical.text.impl.TextLine;
 import org.primaresearch.dla.page.layout.physical.text.impl.TextRegion;
 import org.primaresearch.io.UnsupportedFormatVersionException;
+import org.primaresearch.io.xml.XmlModelAndValidatorProvider;
 import org.primaresearch.maths.geometry.Point;
 
 /**
@@ -94,12 +96,81 @@ public class Util {
         return res;
     }
 
-    public static List<Polygon> getRegionPolysFromFile(String fileName) {
+    public static String poly2string(Polygon poly) {
+        StringBuilder stringBuilder = new StringBuilder();
+
+        for (int i = 0; i < poly.npoints; i++) {
+            if (i > 0) {
+                stringBuilder.append(";");
+            }
+            stringBuilder.append(poly.xpoints[i]);
+            stringBuilder.append(",");
+            stringBuilder.append(poly.ypoints[i]);
+        }
+        stringBuilder.append("\n");
+        return stringBuilder.toString();
+    }
+
+    public static List<List<Polygon>> getPolysFromPageFile(String fileName) throws XmlModelAndValidatorProvider.NoSchemasException {
+        if (fileName.endsWith(".xml")) {
+            Page aPage;
+            try {
+                List<List<Polygon>> res = new ArrayList<>();
+//                aPage = reader.read(new FileInput(new File(fileName)));
+                aPage = PageXmlInputOutput.readPage(fileName);
+                if (aPage == null) {
+                    System.out.println("Error while parsing xml-File.");
+                    return null;
+                }
+                List<Region> regionsSorted = aPage.getLayout().getRegionsSorted();
+                for (Region reg : regionsSorted) {
+                    if (reg instanceof TextRegion) {
+                        List<Polygon> aReg = new ArrayList<>();
+                        org.primaresearch.maths.geometry.Polygon regPoly = ((TextRegion) reg).getCoords();
+                        if (regPoly != null) {
+                            Polygon aPoly = new Polygon();
+                            for (int j = 0; j < regPoly.getSize(); j++) {
+                                Point aPt = regPoly.getPoint(j);
+                                aPoly.addPoint(aPt.x, aPt.y);
+                            }
+                            aReg.add(aPoly);
+                        } else {
+                            aReg.add(new Polygon(new int[]{0, 0}, new int[]{0, 0}, 2));
+                        }
+
+                        for (LowLevelTextObject tObj : ((TextRegion) reg).getTextObjectsSorted()) {
+                            if (tObj instanceof TextLine) {
+                                org.primaresearch.maths.geometry.Polygon aBL = ((TextLine) tObj).getBaseline();
+                                if (aBL != null) {
+                                    Polygon aPoly = new Polygon();
+                                    for (int j = 0; j < aBL.getSize(); j++) {
+                                        Point aPt = aBL.getPoint(j);
+                                        aPoly.addPoint(aPt.x, aPt.y);
+                                    }
+                                    aReg.add(aPoly);
+                                }
+                            }
+                        }
+                        res.add(aReg);
+                    }
+                }
+                return res;
+            } catch (UnsupportedFormatVersionException ex) {
+                System.out.println(ex);
+                System.out.println("Error while parsing xml-File.");
+                Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        return null;
+    }
+
+    public static List<Polygon> getRegionPolysFromFile(String fileName) throws XmlModelAndValidatorProvider.NoSchemasException {
         if (fileName.endsWith(".xml")) {
             Page aPage;
             try {
                 List<Polygon> res = new ArrayList<>();
-                aPage = XmlInputOutput.readPage(fileName);
+//                aPage = reader.read(new FileInput(new File(fileName)));
+                aPage = PageXmlInputOutput.readPage(fileName);
                 if (aPage == null) {
                     System.out.println("Error while parsing xml-File.");
                     return null;
@@ -108,7 +179,7 @@ public class Util {
                 for (Region reg : regionsSorted) {
                     if (reg instanceof TextRegion) {
                         org.primaresearch.maths.geometry.Polygon regPoly = ((TextRegion) reg).getCoords();
-                        if(regPoly != null){
+                        if (regPoly != null) {
                             Polygon aPoly = new Polygon();
                             for (int j = 0; j < regPoly.getSize(); j++) {
                                 Point aPt = regPoly.getPoint(j);
@@ -119,7 +190,7 @@ public class Util {
                     }
                 }
                 return res;
-            }catch (UnsupportedFormatVersionException ex) {
+            } catch (UnsupportedFormatVersionException ex) {
                 System.out.println(ex);
                 System.out.println("Error while parsing xml-File.");
                 Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
@@ -128,7 +199,7 @@ public class Util {
         return null;
     }
 
-    public static Polygon[] getPolysFromFile(String polyFileName, List<Polygon> regionPolys) throws IOException {
+    public static Polygon[] getPolysFromFile(String polyFileName, List<Polygon> regionPolys) throws IOException, XmlModelAndValidatorProvider.NoSchemasException {
 
         if (polyFileName.endsWith(".txt")) {
             ArrayList<String> polyString = Util.loadTextFile(polyFileName);
@@ -140,7 +211,7 @@ public class Util {
             for (int i = 0; i < polyString.size(); i++) {
                 String polyStringA = polyString.get(i);
                 Polygon aPoly = parseString(polyStringA);
-                if(isContained(aPoly, regionPolys)){
+                if (isContained(aPoly, regionPolys)) {
                     res.add(aPoly);
                 }
             }
@@ -150,10 +221,12 @@ public class Util {
             ArrayList<org.primaresearch.maths.geometry.Polygon> baselines = new ArrayList<org.primaresearch.maths.geometry.Polygon>();
             Page aPage;
             try {
-                System.out.println(polyFileName);
-                aPage = XmlInputOutput.readPage(polyFileName);
+//                System.out.println(polyFileName);
+//                aPage = reader.read(new FileInput(new File(polyFileName)));
+                aPage = PageXmlInputOutput.readPage(polyFileName);
                 if (aPage == null) {
-                    System.out.println("Error while parsing xml-File.");
+                    System.out.println(polyFileName);
+                    System.out.println("Error while parsing xml-File. Have you set default (dummy) coords for each region? Have a look at the HowTo!");
                     return null;
                 }
                 List<Region> regionsSorted = aPage.getLayout().getRegionsSorted();
@@ -177,7 +250,7 @@ public class Util {
                         Point aPt = aPoly.getPoint(j);
                         aPolyAWT.addPoint(aPt.x, aPt.y);
                     }
-                    if(isContained(aPolyAWT, regionPolys)){
+                    if (isContained(aPolyAWT, regionPolys)) {
                         res.add(aPolyAWT);
                     }
                 }
@@ -376,7 +449,7 @@ public class Util {
     }
 
     private static Polygon[] asArray(List<Polygon> in) {
-        if(in == null){
+        if (in == null) {
             return null;
         }
         Polygon[] res = new Polygon[in.size()];
@@ -387,19 +460,205 @@ public class Util {
     }
 
     private static boolean isContained(Polygon bL, List<Polygon> regionPolys) {
-        if(regionPolys == null){
+        if (regionPolys == null) {
             return true;
         }
         for (int i = 0; i < bL.npoints; i++) {
             int aX = bL.xpoints[i];
             int aY = bL.ypoints[i];
             for (Polygon aRP : regionPolys) {
-                if(aRP.contains(aX, aY)){
+                if (aRP.contains(aX, aY)) {
                     return true;
                 }
             }
         }
         return false;
+    }
+
+    public static double[] calcTols(Polygon[] polyTruthNorm, int tickDist, int maxD, double relTol) {
+        double[] tols = new double[polyTruthNorm.length];
+
+        int lineCnt = 0;
+        for (Polygon aPoly : polyTruthNorm) {
+            double angle = calcRegLineStats(aPoly)[0];
+            double orVecY = Math.sin(angle);
+            double orVecX = Math.cos(angle);
+            double aDist = maxD;
+            double[] ptA1 = new double[]{aPoly.xpoints[0], aPoly.ypoints[0]};
+            double[] ptA2 = new double[]{aPoly.xpoints[aPoly.npoints - 1], aPoly.ypoints[aPoly.npoints - 1]};
+            for (int i = 0; i < aPoly.npoints; i++) {
+                double[] pA = new double[]{aPoly.xpoints[i], aPoly.ypoints[i]};
+                for (Polygon cPoly : polyTruthNorm) {
+                    if (cPoly != aPoly) {
+                        if (getDistFast(pA, cPoly.getBounds()) > aDist) {
+                            continue;
+                        }
+                        double[] ptC1 = new double[]{cPoly.xpoints[0], cPoly.ypoints[0]};
+                        double[] ptC2 = new double[]{cPoly.xpoints[cPoly.npoints - 1], cPoly.ypoints[cPoly.npoints - 1]};
+                        double inD1 = getInDist(ptA1, ptC1, orVecX, orVecY);
+                        double inD2 = getInDist(ptA1, ptC2, orVecX, orVecY);
+                        double inD3 = getInDist(ptA2, ptC1, orVecX, orVecY);
+                        double inD4 = getInDist(ptA2, ptC2, orVecX, orVecY);
+                        if ((inD1 < 0 && inD2 < 0 && inD3 < 0 && inD4 < 0) || (inD1 > 0 && inD2 > 0 && inD3 > 0 && inD4 > 0)) {
+                            continue;
+                        }
+
+                        for (int j = 0; j < cPoly.npoints; j++) {
+                            double[] pC = new double[]{cPoly.xpoints[j], cPoly.ypoints[j]};
+                            if (Math.abs(getInDist(pA, pC, orVecX, orVecY)) <= 2 * tickDist) {
+                                aDist = Math.min(aDist, Math.abs(getOffDist(pA, pC, orVecX, orVecY)));
+                            }
+                        }
+                    }
+                }
+            }
+//            System.out.println("Line " + lineCnt + " has min dist of: " + aDist);
+//            System.out.println("Line " + lineCnt + " has startX: " + aPoly.xpoints[0] + " and startY: " + aPoly.ypoints[0]);
+            if (aDist < maxD) {
+                tols[lineCnt] = aDist;
+            }
+            lineCnt++;
+        }
+        double sumVal = 0.0;
+        int cnt = 0;
+        for (int i = 0; i < tols.length; i++) {
+            double aTol = tols[i];
+            if (aTol != 0) {
+                sumVal += aTol;
+                cnt++;
+            }
+        }
+        double meanVal = maxD;
+        if (cnt != 0) {
+            meanVal = sumVal / cnt;
+        }
+
+        for (int i = 0; i < tols.length; i++) {
+            if (tols[i] == 0) {
+                tols[i] = meanVal;
+            }
+            tols[i] = Math.min(tols[i], meanVal);
+            tols[i] *= relTol;
+        }
+
+        return tols;
+    }
+
+    private static double getOffDist(double[] aPt, double[] cPt, double orVecX, double orVecY) {
+        double diffX = aPt[0] - cPt[0];
+        double diffY = -aPt[1] + cPt[1];
+        //Since orVec has length 1 calculate the cross product, which is 
+        //the orthogonal distance from diff to orVec, take into account 
+        //the z-Value to decide whether its a positive or negative distance!
+        //double dotProdX = 0;
+        //double dotProdY = 0;
+        return diffX * orVecY - diffY * orVecX;
+    }
+
+    public static double getInDist(double[] aPt, double[] cPt, double orVecX, double orVecY) {
+        double diffX = aPt[0] - cPt[0];
+        double diffY = -aPt[1] + cPt[1];
+        //Parallel component of (diffX, diffY) is lambda * (orVecX, orVecY) with
+        double lambda = diffX * orVecX + orVecY * diffY;
+
+        return lambda;
+    }
+
+    public static double getDistFast(double[] aPt, double[] bPt) {
+        return Math.abs(aPt[0] - bPt[0]) + Math.abs(aPt[1] - bPt[1]);
+    }
+
+    public static double getDistFast(double[] aPt, Rectangle bb) {
+        double dist = 0.0;
+        if (aPt[0] < bb.x) {
+            dist += bb.x - aPt[0];
+        }
+        if (aPt[0] > bb.x + bb.width) {
+            dist += aPt[0] - bb.x - bb.width;
+        }
+        if (aPt[1] < bb.y) {
+            dist += bb.y - aPt[1];
+        }
+        if (aPt[1] > bb.y + bb.height) {
+            dist += aPt[1] - bb.y - bb.height;
+        }
+        return dist;
+    }
+
+    /**
+     *
+     * @param p
+     * @return #0 - angle #1 - absVal
+     */
+    private static double[] calcRegLineStats(Polygon p) {
+        if (p.npoints <= 1) {
+            return new double[]{0.0, 0.0};
+        }
+        double m = 0.0;
+        double n = Double.POSITIVE_INFINITY;
+        if (p.npoints > 2) {
+            int xMax = 0;
+            int xMin = Integer.MAX_VALUE;
+            for (int i = 0; i < p.npoints; i++) {
+                int xVal = p.xpoints[i];
+                xMax = Math.max(xMax, xVal);
+                xMin = Math.min(xMin, xVal);
+            }
+            if (xMax == xMin) {
+                m = Double.POSITIVE_INFINITY;
+            } else {
+                int[] xPs = new int[p.npoints];
+                int[] yPs = new int[p.npoints];
+                for (int i = 0; i < p.npoints; i++) {
+                    xPs[i] = p.xpoints[i];
+                    yPs[i] = -p.ypoints[i];
+                }
+                double[] calcLine = LinRegression.calcLine(xPs, yPs);
+                m = calcLine[1];
+                n = calcLine[0];
+            }
+        } else {
+            int x1 = p.xpoints[0];
+            int x2 = p.xpoints[1];
+            int y1 = -p.ypoints[0];
+            int y2 = -p.ypoints[1];
+            if (x1 == x2) {
+                m = Double.POSITIVE_INFINITY;
+            } else {
+                m = (double) (y2 - y1) / (x2 - x1);
+                n = y2 - m * x2;
+            }
+        }
+        double angle = 0.0;
+        if (Double.isInfinite(m)) {
+            angle = Math.PI / 2.0;
+        } else {
+            angle = Math.atan(m);
+        }
+
+        int fP = 0;
+        int lP = p.npoints - 1;
+
+        if (angle > -Math.PI / 2.0 && angle <= -Math.PI / 4.0) {
+            if (p.ypoints[fP] > p.ypoints[lP]) {
+                angle += Math.PI;
+            }
+        }
+        if (angle > -Math.PI / 4.0 && angle <= Math.PI / 4.0) {
+            if (p.xpoints[fP] > p.xpoints[lP]) {
+                angle += Math.PI;
+            }
+        }
+        if (angle > Math.PI / 4.0 && angle <= Math.PI / 2.0) {
+            if (p.ypoints[fP] < p.ypoints[lP]) {
+                angle += Math.PI;
+            }
+        }
+
+        if (angle < 0) {
+            angle += 2 * Math.PI;
+        }
+        return new double[]{angle, n};
     }
 
     private static class BuffPanel extends JPanel {
