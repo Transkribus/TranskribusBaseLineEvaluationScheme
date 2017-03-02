@@ -40,8 +40,8 @@ public class Metric_BL_run {
         options.addOption("tol", "tolerance", false, "graphical output of values for different tolerance thresholds");
         options.addOption("t", "threshold", false, "graphical output of thresholded values");
         options.addOption("i", "imagepath", true, "displays truth and reco baselines of first page in this image");
-        options.addOption("minT", true, "minimum tolerance value to be soncidered default is 10");
-        options.addOption("maxT", true, "maximum tolerance value to be soncidered default is 30");
+        options.addOption("minT", true, "minimum tolerance value to be soncidered default is -1 -> dynamic calculation");
+        options.addOption("maxT", true, "maximum tolerance value to be soncidered default is -1 -> dynamic calculation");
         options.addOption("tTF", true, "threshold for precision and recall to make a decission concerning tp, fp, fn, tn; default is -1 (nothing is done); should be between 0 and 1");
         options.addOption("s", false, "save the plausi plot (if activated)");
         options.addOption("r", false, "only evaluate hypo polygons if they are (partly) contained in region polygon (if available)");
