@@ -273,7 +273,7 @@ public class Metric_BL_run {
                     double pageRecall = pageWiseRecall.get(resCnt);
                     double pagePrecision = pageWisePrecision.get(resCnt);
                     double pageFmeas = Util.fmeas(pagePrecision, pageRecall);
-                    sb.append(String.format("%10.4f", pagePrecision).replace(",", ".") + ", " + String.format("%10.4f", pageRecall).replace(",", ".") + ", " + String.format("%10.4f", pageFmeas).replace(",", ".") + ", " + listTruth.get(i) + ", " + listReco.get(i)  + "\n");
+                    sb.append(String.format("%10.4f", pagePrecision).replace(",", ".") + ", " + String.format("%10.4f", pageRecall).replace(",", ".") + ", " + String.format("%10.4f", pageFmeas).replace(",", ".") + ", " + listTruth.get(i) + ", " + listReco.get(i) + "\n");
                     resCnt++;
                 }
 
@@ -308,8 +308,10 @@ public class Metric_BL_run {
 
             System.out.println(finalEvaluation);
 
-            if(!notSave){
+            if (!notSave) {
                 //Write final evaluation in a *.txt-file
+                formatter = new SimpleDateFormat("yyyy_MM_dd_'at'_HH_mm_ss");
+                date = formatter.format(currentTime);
                 String fileName = "evaluation_" + date + ".txt";
                 BufferedWriter writer = null;
                 try {
