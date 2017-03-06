@@ -25,7 +25,7 @@ how the tool works.
 
 If you only want to USE the tool run
 ```
-java -jar target/TranskribusBaseLineMetricTool-0.0.2-jar-with-dependencies.jar --help
+java -jar target/TranskribusBaseLineEvaluationScheme-0.1.0-jar-with-dependencies.jar --help
 ```
 for the help.
 
