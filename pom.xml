@@ -2,8 +2,8 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>eu.transkribus</groupId>
-    <artifactId>TranskribusBaseLineMetricTool</artifactId>
-    <version>0.0.4</version>
+    <artifactId>TranskribusBaseLineEvaluationScheme</artifactId>
+    <version>0.1.0</version>
     <packaging>jar</packaging>
     <repositories>
         <!-- dea artifactory: -->		
@@ -71,7 +71,7 @@
         <site>
             <id>website</id>
             <name>transkribus.eu</name>
-            <url>scp://read01.uibk.ac.at/var/www/html/TranskribusBaseLineMetricTool</url>
+            <url>scp://read01.uibk.ac.at/var/www/html/TranskribusBaseLineEvaluationScheme</url>
         </site>
     </distributionManagement>
     <properties>
@@ -89,7 +89,7 @@
                     </descriptorRefs>
                     <archive>
                         <manifest>
-                            <mainClass>eu.transkribus.baselinemetrictool.Metric_BL_run</mainClass>
+                            <mainClass>eu.transkribus.baselineevaluationscheme.Metric_BL_run</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
@@ -153,4 +153,5 @@
             </plugin>
         </plugins>
     </reporting>
+    <name>TranskribusBaseLineEvaluationScheme</name>
 </project>

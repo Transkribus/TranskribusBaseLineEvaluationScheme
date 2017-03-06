@@ -6,11 +6,17 @@ package eu.transkribus.baselineevaluationscheme;
 /// Encoding:   UTF-8
 ////////////////////////////////////////////////
 import eu.transkribus.baselineevaluationscheme.util.BaseLineMetricResult;
+import eu.transkribus.baselineevaluationscheme.util.LoadResult;
 import eu.transkribus.baselineevaluationscheme.util.Util;
 import java.awt.Polygon;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.DefaultParser;
@@ -28,7 +34,7 @@ import org.primaresearch.io.xml.XmlModelAndValidatorProvider;
  *
  * Since 19.04.2016
  *
- * @author Tobi <tobias.gruening.hro@gmail.com>
+ * @author Tobias Gruening tobias.gruening.hro@gmail.com
  */
 public class Metric_BL_run {
 
@@ -36,15 +42,15 @@ public class Metric_BL_run {
 
     public Metric_BL_run() {
         options.addOption("h", "help", false, "show this help");
-        options.addOption("p", "pagewise", false, "pagewise results are shown");
         options.addOption("tol", "tolerance", false, "graphical output of values for different tolerance thresholds");
         options.addOption("t", "threshold", false, "graphical output of thresholded values");
         options.addOption("i", "imagepath", true, "displays truth and reco baselines of first page in this image");
-        options.addOption("minT", true, "minimum tolerance value to be soncidered default is -1 -> dynamic calculation");
-        options.addOption("maxT", true, "maximum tolerance value to be soncidered default is -1 -> dynamic calculation");
-        options.addOption("tTF", true, "threshold for precision and recall to make a decission concerning tp, fp, fn, tn; default is -1 (nothing is done); should be between 0 and 1");
+        options.addOption("minT", true, "minimum tolerance value to be concidered default is -1 -> dynamic calculation");
+        options.addOption("maxT", true, "maximum tolerance value to be concidered default is -1 -> dynamic calculation");
+        options.addOption("tTF", true, "threshold for P and R value to make a decision concerning tp, fp, fn, tn; default is -1 (nothing is done); should be between 0 and 1");
         options.addOption("s", false, "save the plausi plot (if activated)");
         options.addOption("r", false, "only evaluate hypo polygons if they are (partly) contained in region polygon (if available)");
+        options.addOption("no_s", false, "Don't save the evaluation results.");
     }
 
     private void help() {
@@ -65,7 +71,7 @@ public class Metric_BL_run {
         }
         HelpFormatter formater = new HelpFormatter();
         formater.printHelp(
-                "java -jar BaseLineMetricToolURO.jar <truth> <reco>",
+                "java -jar TranskribusBaselineEvaluationScheme-X.X.X-jar-with-dependencies.jar <truth> <reco>",
                 "This method calculates the baseline errors in a precision/recall manner."
                 + " As input it requires the truth and reco information."
                 + " A basic truth (and reco) file corresponding to a page of document has to be a txt-file (or a page xml). In case of a text file every line in this txt-file corresponds to a baseline polygon and should look like: x1,y1;x2,y2;x3,y3;....;xn,yn."
@@ -89,8 +95,8 @@ public class Metric_BL_run {
                 help();
             }
 
-            //Pagewise display?
-            boolean pagewise = cmd.hasOption('p');
+            //Don't save results?
+            boolean notSave = cmd.hasOption("no_s");
             //Display thresholded values?
             boolean thresholdDisplay = cmd.hasOption('t');
             //Display tolerance dependent values?
@@ -160,40 +166,83 @@ public class Metric_BL_run {
             int numPolyTruth = 0;
             int numPolyReco = 0;
 
-            for (int i = 0; i < polyPagesReco.length; i++) {
-                List<Polygon> regionPolys = null;
+            boolean[] toSkipBecauseOfError = new boolean[polyPagesReco.length];
+            StringBuilder sb = new StringBuilder();
+            SimpleDateFormat formatter = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss ");
+            Date currentTime = new Date();
+            String date = formatter.format(currentTime);
+            sb.append("---TranskribusBaseLineEvaluationScheme--- \n");
+            sb.append("\n");
+            sb.append("Evaluation performed on " + date + "\n");
+            sb.append("Evaluation performed for GT " + fileNameTruth + "\n");
+            sb.append("Evaluation performed for HYPO " + fileNameReco + "\n");
+            sb.append("Number of pages: " + listTruth.size() + "\n");
+            sb.append("\n");
+            sb.append("Loading protocol: " + "\n");
 
+            for (int i = 0; i < polyPagesReco.length; i++) {
+                toSkipBecauseOfError[i] = false;
+                List<Polygon> regionPolys = null;
 //                    polyPagesTruth[i] = null;
                 try {
-                    polyPagesTruth[i] = Util.getPolysFromFile(listTruth.get(i), null);
+                    LoadResult polysFromFile = Util.getPolysFromFile(listTruth.get(i), null);
+                    polyPagesTruth[i] = polysFromFile.getPolys();
+                    if (polysFromFile.isError()) {
+                        sb.append("   Error loading: " + listTruth.get(i) + "\n");
+                        toSkipBecauseOfError[i] = true;
+                    }
                 } catch (IOException ex) {
-                    System.out.println(ex + "  " + listTruth.get(i));
+                    sb.append("   Error loading: " + listTruth.get(i) + "\n");
+                    toSkipBecauseOfError[i] = true;
                 }
 
                 if (useRegionPoly) {
                     regionPolys = Util.getRegionPolysFromFile(listTruth.get(i));
                 }
-
-                if (polyPagesTruth[i] != null) {
+                try {
+                    LoadResult polysFromFile = Util.getPolysFromFile(listReco.get(i), regionPolys);
+                    polyPagesReco[i] = polysFromFile.getPolys();
+                    if (polysFromFile.isError()) {
+                        sb.append("   Error loading: " + listReco.get(i) + "\n");
+                        toSkipBecauseOfError[i] = true;
+                    }
+                } catch (IOException ex) {
+                    sb.append("   Error loading: " + listReco.get(i) + "\n");
+                    toSkipBecauseOfError[i] = true;
+                }
+                if (polyPagesTruth[i] != null && !toSkipBecauseOfError[i]) {
                     numPolyTruth += polyPagesTruth[i].length;
                 }
-//                polyPagesReco[i] = null;
-                try {
-                    polyPagesReco[i] = Util.getPolysFromFile(listReco.get(i), regionPolys);
-                } catch (IOException ex) {
-                    System.out.println(ex + "  " + listReco.get(i));
-                }
-                if (polyPagesReco[i] != null) {
+                if (polyPagesReco[i] != null && !toSkipBecauseOfError[i]) {
                     numPolyReco += polyPagesReco[i].length;
                 }
             }
 
+            int errorPages = 0;
+            for (boolean aErr : toSkipBecauseOfError) {
+                if (aErr) {
+                    errorPages++;
+                }
+            }
+
+            if (errorPages == 0) {
+                sb.append("   Everything loaded without errors." + "\n");
+            }
+            sb.append("\n");
+            sb.append(listTruth.size() - errorPages + " out of " + listTruth.size() + " GT-HYPO pairs loaded without errors and used for evaluation." + "\n");
+            sb.append("\n");
+            sb.append("Number of groundtruth lines: " + numPolyTruth + "\n");
+            sb.append("Number of hypothesis lines: " + numPolyReco + "\n");
+            sb.append("\n");
             //Evaluate the metric for the given reco and truth baseline polygons
             //Creation of an instance of the metric eval tool
             Metric_BL_eval m_bl = new Metric_BL_eval(minT, maxT);
 
             //For each page the metric is evaluated
             for (int i = 0; i < polyPagesReco.length; i++) {
+                if (toSkipBecauseOfError[i]) {
+                    continue;
+                }
                 Polygon[] recoA = polyPagesReco[i];
                 Polygon[] truthA = polyPagesTruth[i];
                 m_bl.calcMetricForPageBaseLinePolys(truthA, recoA);
@@ -202,6 +251,7 @@ public class Metric_BL_run {
             //Getting the result structure
             BaseLineMetricResult res = m_bl.getRes();
 
+//            sb.append("Number of correctly loaded pages: " + );
             DecimalFormat df = new DecimalFormat("##.####");
             int[][] pageWiseTrueFalsePositives = null;
             int[][] pageWiseTrueFalseNegatives = null;
@@ -210,37 +260,32 @@ public class Metric_BL_run {
                 pageWiseTrueFalseNegatives = res.getPageWiseTrueFalseCntsGT(thresTP);
             }
             //Show pagewise results if desired
-            if (pagewise) {
-                ArrayList<Double> pageWiseRecall = res.getPageWiseRecall();
-                ArrayList<Double> pageWisePrecision = res.getPageWisePrecision();
-                for (int i = 0; i < pageWiseRecall.size(); i++) {
-                    double pageRecall = pageWiseRecall.get(i);
-                    double pagePrecision = pageWisePrecision.get(i);
-                    double pageFmeas = Util.fmeas(pagePrecision, pageRecall);
-                    System.out.println("Page " + i);
-                    System.out.println("Avg precision: " + df.format(pagePrecision));
-                    System.out.println("Avg recall: " + df.format(pageRecall));
-                    System.out.println("Avg f-measure: " + df.format(pageFmeas));
-                    if (thresTP > 0.0) {
-                        System.out.println("Number of true hypothesis lines for avg precision threshold of " + df.format(thresTP) + " is: " + pageWiseTrueFalsePositives[0][i]);
-                        System.out.println("Number of false hypothesis lines for avg precision threshold of " + df.format(thresTP) + " is: " + pageWiseTrueFalsePositives[1][i]);
-                        System.out.println("Number of true groundtruth lines for avg recall threshold of " + df.format(thresTP) + " is: " + pageWiseTrueFalseNegatives[0][i]);
-                        System.out.println("Number of false groundtruth lines for avg recall threshold of " + df.format(thresTP) + " is: " + pageWiseTrueFalseNegatives[1][i]);
-                    }
-                    System.out.println("");
-                }
-            }
+            ArrayList<Double> pageWiseRecall = res.getPageWiseRecall();
+            ArrayList<Double> pageWisePrecision = res.getPageWisePrecision();
+            sb.append("Pagewise evaluation :" + "\n");
+            sb.append("#P value, #R value, #F_1 value, #TruthFileName, #HypoFileName" + "\n");
 
-            System.out.println("");
-            System.out.println("#######Final Evaluation#######");
-            System.out.println("Number of pages: " + listTruth.size());
-            System.out.println("Number of groundtruth lines: " + numPolyTruth);
-            System.out.println("Number of hypothesis lines: " + numPolyReco);
-            System.out.println("");
-            System.out.println("Avg (over pages) avg precision: " + df.format(res.getPrecision()));
-            System.out.println("Avg (over pages) avg recall: " + df.format(res.getRecall()));
-            System.out.println("Avg (over pages) avg f-measure: " + df.format(Util.fmeas(res.getPrecision(), res.getRecall())));
-            System.out.println("");
+            int resCnt = 0;
+            for (int i = 0; i < polyPagesReco.length; i++) {
+                if (toSkipBecauseOfError[i]) {
+                    sb.append("      X            X           X  , " + listTruth.get(i) + ", " + listReco.get(i) + "\n");
+                } else {
+                    double pageRecall = pageWiseRecall.get(resCnt);
+                    double pagePrecision = pageWisePrecision.get(resCnt);
+                    double pageFmeas = Util.fmeas(pagePrecision, pageRecall);
+                    sb.append(String.format("%10.4f", pagePrecision).replace(",", ".") + ", " + String.format("%10.4f", pageRecall).replace(",", ".") + ", " + String.format("%10.4f", pageFmeas).replace(",", ".") + ", " + listTruth.get(i) + ", " + listReco.get(i)  + "\n");
+                    resCnt++;
+                }
+
+            }
+            sb.append("\n");
+            sb.append("\n");
+            sb.append("#######Final Evaluation#######" + "\n");
+            sb.append("\n");
+            sb.append("Avg (over pages) P value: " + df.format(res.getPrecision()).replace(",", ".") + "\n");
+            sb.append("Avg (over pages) R value: " + df.format(res.getRecall()).replace(",", ".") + "\n");
+            sb.append("Resulting F_1 value: " + df.format(Util.fmeas(res.getPrecision(), res.getRecall())).replace(",", ".") + "\n");
+            sb.append("\n");
             if (thresTP > 0.0) {
                 //Get global tP, fP
                 int tP = 0;
@@ -253,15 +298,40 @@ public class Metric_BL_run {
                     tN += pageWiseTrueFalseNegatives[0][i];
                     fN += pageWiseTrueFalseNegatives[1][i];
                 }
-                System.out.println("Number of true hypothesis lines for avg precision threshold of " + df.format(thresTP) + " is: " + tP);
-                System.out.println("Number of false hypothesis lines for avg precision threshold of " + df.format(thresTP) + " is: " + fP);
-                System.out.println("Number of true groundtruth lines for avg recall threshold of " + df.format(thresTP) + " is: " + tN);
-                System.out.println("Number of false groundtruth lines for avg recall threshold of " + df.format(thresTP) + " is: " + fN);
+                sb.append("Number of true hypothesis lines for avg P value threshold of " + df.format(thresTP).replace(",", ".") + " is: " + tP + "\n");
+                sb.append("Number of false hypothesis lines for avg P value threshold of " + df.format(thresTP).replace(",", ".") + " is: " + fP + "\n");
+                sb.append("Number of true groundtruth lines for avg R value threshold of " + df.format(thresTP).replace(",", ".") + " is: " + tN + "\n");
+                sb.append("Number of false groundtruth lines for avg R value threshold of " + df.format(thresTP).replace(",", ".") + " is: " + fN + "\n");
+                sb.append("\n");
+            }
+            String finalEvaluation = sb.toString();
+
+            System.out.println(finalEvaluation);
+
+            if(!notSave){
+                //Write final evaluation in a *.txt-file
+                String fileName = "evaluation_" + date + ".txt";
+                BufferedWriter writer = null;
+                try {
+                    //create a temporary file
+                    File logFile = new File(fileName);
+
+                    writer = new BufferedWriter(new FileWriter(logFile));
+                    writer.write(finalEvaluation);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                } finally {
+                    try {
+                        // Close the writer regardless of what happens...
+                        writer.close();
+                    } catch (Exception e) {
+                    }
+                }
             }
 
             //Display of values for different tolerances
             if (toleranceDisplay) {
-                if(minT >= 0){
+                if (minT >= 0) {
                     double[] tolWiseRecall = new double[m_bl.getMaxTols().length];
                     double[] tolWisePrecision = new double[m_bl.getMaxTols().length];
                     double[] tolWiseFmeas = new double[m_bl.getMaxTols().length];
@@ -292,16 +362,16 @@ public class Metric_BL_run {
                     valsT[1] = tolWisePrecision;
                     valsT[2] = tolWiseFmeas;
                     String[] ser = new String[3];
-                    ser[0] = "Recall";
-                    ser[1] = "Precision";
-                    ser[2] = "F-Measure";
-                    Chart chart = QuickChart.getChart("Tolerance-Chart", "Tolerance Value", "Metric Value (avg over pages)", ser, m_bl.getMaxTols(), valsT);
+                    ser[0] = "R value";
+                    ser[1] = "P value";
+                    ser[2] = "F_1 value";
+                    Chart chart = QuickChart.getChart("Tolerance-Chart", "Tolerance Value", "Evaluation Value (avg over pages)", ser, m_bl.getMaxTols(), valsT);
                     // Show it
-                    new SwingWrapper(chart).displayChart("TranskribusBaseLineMetricTool - ToleranceValue");
-                }else{
+                    new SwingWrapper(chart).displayChart("TranskribusBaseLineEvaluationScheme - ToleranceValue");
+                } else {
                     System.out.println("The Tolerance-Chart is not available for dynamic tolerance value computation! ");
                 }
-                
+
             }
 
             //Display of the plausi image
@@ -385,12 +455,12 @@ public class Metric_BL_run {
                 serVals[2] = tickFmeas;
 
                 String[] ser = new String[3];
-                ser[0] = "Recall";
-                ser[1] = "Precision";
-                ser[2] = "F-Measure";
-                Chart chart = QuickChart.getChart("Thresholded-Chart", "Threshold Value", "Metric Value (avg over pages)", ser, thTicks, serVals);
+                ser[0] = "R value";
+                ser[1] = "P value";
+                ser[2] = "F_1 value";
+                Chart chart = QuickChart.getChart("Thresholded-Chart", "Threshold Value", "Evaluation Value (avg over pages)", ser, thTicks, serVals);
                 // Show it
-                new SwingWrapper(chart).displayChart("TranskribusBaseLineMetricTool - Thresholded");
+                new SwingWrapper(chart).displayChart("TranskribusBaseLineEvaluationScheme - Thresholded");
             }
         } catch (ParseException e) {
             help("Failed to parse comand line properties", e);
@@ -402,18 +472,15 @@ public class Metric_BL_run {
      */
     public static void main(String[] args) throws IOException, XmlModelAndValidatorProvider.NoSchemasException {
 
-//        args = new String[10];
+//        args = new String[7];
 //        args[0] = "src/test/resources/truth.lst";
 //        args[1] = "src/test/resources/reco.lst";
-//        args[2] = "-tol";
-//        args[3] = "-i";
-//        args[4] = "src/test/resources/metrEx.png";
-//        args[5] = "-t";
-//        args[6] = "-p";
-//        args[7] = "-tTF";
-//        args[8] = "0.8";
-//        args[9] = "-r";
-
+//        args[2] = "-i";
+//        args[3] = "src/test/resources/metrEx.png";
+//        args[4] = "-t";
+//        args[5] = "-r";
+//        args[6] = "-no_s";
+//
         Metric_BL_run erp = new Metric_BL_run();
         erp.run(args);
     }

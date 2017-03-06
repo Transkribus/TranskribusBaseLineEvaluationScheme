@@ -10,7 +10,7 @@ package eu.transkribus.baselineevaluationscheme.util;
 /**
  * Describtion of LinRegression: 
  *
- * @author Tobias Grüning <tobias.gruening@uni-rostock.de>
+ * @author Tobias Gruening tobias.gruening.hro@gmail.com
  */
 public class LinRegression {
 

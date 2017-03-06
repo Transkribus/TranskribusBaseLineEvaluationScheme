@@ -199,8 +199,7 @@ public class Util {
         return null;
     }
 
-    public static Polygon[] getPolysFromFile(String polyFileName, List<Polygon> regionPolys) throws IOException, XmlModelAndValidatorProvider.NoSchemasException {
-
+    public static LoadResult getPolysFromFile(String polyFileName, List<Polygon> regionPolys) throws IOException, XmlModelAndValidatorProvider.NoSchemasException {
         if (polyFileName.endsWith(".txt")) {
             ArrayList<String> polyString = Util.loadTextFile(polyFileName);
             if (polyString == null || polyString.size() == 0 || polyString.get(0).isEmpty()) {
@@ -210,12 +209,16 @@ public class Util {
             List<Polygon> res = new ArrayList<Polygon>();
             for (int i = 0; i < polyString.size(); i++) {
                 String polyStringA = polyString.get(i);
-                Polygon aPoly = parseString(polyStringA);
-                if (isContained(aPoly, regionPolys)) {
-                    res.add(aPoly);
+                try{
+                    Polygon aPoly = parseString(polyStringA);
+                    if (isContained(aPoly, regionPolys)) {
+                        res.add(aPoly);
+                    }
+                }catch(IllegalArgumentException ex){
+                    return new LoadResult(null, true);
                 }
             }
-            return asArray(res);
+            return new LoadResult(asArray(res), false);
         }
         if (polyFileName.endsWith(".xml")) {
             ArrayList<org.primaresearch.maths.geometry.Polygon> baselines = new ArrayList<org.primaresearch.maths.geometry.Polygon>();
@@ -226,8 +229,8 @@ public class Util {
                 aPage = PageXmlInputOutput.readPage(polyFileName);
                 if (aPage == null) {
                     System.out.println(polyFileName);
-                    System.out.println("Error while parsing xml-File. Have you set default (dummy) coords for each region? Have a look at the HowTo!");
-                    return null;
+                    System.out.println("Error while parsing xml-File.");
+                    return new LoadResult(null, true);
                 }
                 List<Region> regionsSorted = aPage.getLayout().getRegionsSorted();
                 for (Region reg : regionsSorted) {
@@ -254,7 +257,7 @@ public class Util {
                         res.add(aPolyAWT);
                     }
                 }
-                return asArray(res);
+                return new LoadResult(asArray(res), false);
 
             } catch (UnsupportedFormatVersionException ex) {
                 System.out.println(ex);
@@ -262,7 +265,7 @@ public class Util {
                 Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
-        return null;
+        return new LoadResult(null, true);
     }
 
     public static Polygon[] normDesDist(Polygon[] polyIn, int desDist) {

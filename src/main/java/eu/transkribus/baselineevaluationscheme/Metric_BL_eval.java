@@ -16,7 +16,7 @@ import java.awt.Rectangle;
  *
  * Since 22.04.2016
  *
- * @author Tobi <tobias.gruening.hro@gmail.com>
+ * @author Tobias Gruening tobias.gruening.hro@gmail.com
  */
 public class Metric_BL_eval {
 
