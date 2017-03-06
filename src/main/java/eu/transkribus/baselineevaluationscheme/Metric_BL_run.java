@@ -1,12 +1,12 @@
-package eu.transkribus.baselinemetrictool;
+package eu.transkribus.baselineevaluationscheme;
 
 ////////////////////////////////////////////////
 /// File:       Metric_run.java
 /// Created:    19.04.2016  16:50:06
 /// Encoding:   UTF-8
 ////////////////////////////////////////////////
-import eu.transkribus.baselinemetrictool.util.BaseLineMetricResult;
-import eu.transkribus.baselinemetrictool.util.Util;
+import eu.transkribus.baselineevaluationscheme.util.BaseLineMetricResult;
+import eu.transkribus.baselineevaluationscheme.util.Util;
 import java.awt.Polygon;
 import java.io.IOException;
 import java.text.DecimalFormat;

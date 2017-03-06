@@ -1,4 +1,4 @@
-package eu.transkribus.baselinemetrictool.util;
+package eu.transkribus.baselineevaluationscheme.util;
 
 ////////////////////////////////////////////////
 /// File:       MetricResult.java

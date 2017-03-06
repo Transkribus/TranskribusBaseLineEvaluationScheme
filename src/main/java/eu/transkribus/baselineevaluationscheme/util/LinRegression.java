@@ -4,7 +4,7 @@
  * Encoding: UTF-8
  */
 
-package eu.transkribus.baselinemetrictool.util;
+package eu.transkribus.baselineevaluationscheme.util;
 
 
 /**

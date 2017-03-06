@@ -5,6 +5,7 @@
  */
 package eu.transkribus.baselinemetrictool;
 
+import eu.transkribus.baselineevaluationscheme.Metric_BL_run;
 import org.junit.Test;
 
 /**
