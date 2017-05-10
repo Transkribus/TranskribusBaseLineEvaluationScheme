@@ -20,7 +20,7 @@ a stand-alone tool is created at
 target/TranskribusBaseLineEvaluationScheme-x.x.x-jar-with-dependencies.jar
 ```
 ### Running
-Have a look at the provided examples in [tool]
+Have a look at the provided examples!  
 
 If you only want to USE the tool run
 ```
