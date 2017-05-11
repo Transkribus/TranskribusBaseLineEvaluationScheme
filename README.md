@@ -1,6 +1,6 @@
 # TranskribusBaseLineEvaluationScheme
 A tool for computing the qualitiy of baseline detection tools. Details explaining the evaluation scheme are available https://arxiv.org/abs/1705.03311 .
-For a standalone jar, with examples and HowTo download [tool](https://github.com/Transkribus/TranskribusBaseLineEvaluationScheme/blob/master/TranskribusBaseLineEvaluationScheme_v0.1.0.tar.gz)
+For a standalone jar, with examples and HowTo download [tool](https://github.com/Transkribus/TranskribusBaseLineEvaluationScheme/blob/master/TranskribusBaseLineEvaluationScheme_v0.1.1.tar.gz)
 
 [![Build Status](http://dbis-halvar.uibk.ac.at/jenkins/buildStatus/icon?job=TranskribusBaseLineEvaluationScheme)](http://dbis-halvar.uibk.ac.at/jenkins/job/TranskribusBaseLineEvaluationScheme)
 
