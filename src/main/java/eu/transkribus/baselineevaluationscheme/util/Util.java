@@ -209,12 +209,12 @@ public class Util {
             List<Polygon> res = new ArrayList<Polygon>();
             for (int i = 0; i < polyString.size(); i++) {
                 String polyStringA = polyString.get(i);
-                try{
+                try {
                     Polygon aPoly = parseString(polyStringA);
                     if (isContained(aPoly, regionPolys)) {
                         res.add(aPoly);
                     }
-                }catch(IllegalArgumentException ex){
+                } catch (IllegalArgumentException ex) {
                     return new LoadResult(null, true);
                 }
             }
@@ -271,7 +271,12 @@ public class Util {
     public static Polygon[] normDesDist(Polygon[] polyIn, int desDist) {
         Polygon[] res = new Polygon[polyIn.length];
         for (int i = 0; i < res.length; i++) {
-            polyIn[i].getBounds();
+            Rectangle bb = polyIn[i].getBounds();
+            if (bb.width > 100000 || bb.height > 100000) {
+                Polygon nPoly = new Polygon();
+                nPoly.addPoint(0,0);
+                polyIn[i] = nPoly;
+            }
             res[i] = normDesDist(polyIn[i], desDist);
             res[i].getBounds();
         }
@@ -359,9 +364,11 @@ public class Util {
             Arrays.fill(specificPageTrueFalseConstellation[1], true);
         }
 
-        BufferedImage img = ImageIO.read(new File(pathToImg));
+        BufferedImage imgT = ImageIO.read(new File(pathToImg));
+        BufferedImage img = new BufferedImage(
+                imgT.getWidth(), imgT.getHeight(), BufferedImage.TYPE_INT_RGB);
         Graphics2D graphics = img.createGraphics();
-
+        graphics.drawImage(imgT, 0, 0, null);
         graphics.setColor(new Color(0F / 255, 0F / 255, 255F / 255));
         if (polysTruth != null) {
             boolean[] hypConst = specificPageTrueFalseConstellation[1];
