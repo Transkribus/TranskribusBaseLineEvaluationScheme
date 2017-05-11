@@ -1,5 +1,5 @@
 # TranskribusBaseLineEvaluationScheme
-A tool for computing the qualitiy of baseline detection tools. Details explaining the evaluation scheme will be published soon.
+A tool for computing the qualitiy of baseline detection tools. Details explaining the evaluation scheme are available https://arxiv.org/abs/1705.03311 .
 For a standalone jar, with examples and HowTo download [tool](https://github.com/Transkribus/TranskribusBaseLineEvaluationScheme/blob/master/TranskribusBaseLineEvaluationScheme_v0.1.0.tar.gz)
 
 [![Build Status](http://dbis-halvar.uibk.ac.at/jenkins/buildStatus/icon?job=TranskribusBaseLineEvaluationScheme)](http://dbis-halvar.uibk.ac.at/jenkins/job/TranskribusBaseLineEvaluationScheme)
@@ -17,16 +17,14 @@ mvn install
 ```
 a stand-alone tool is created at
 ```
-target/TranskribusBaseLineEvaluationScheme-0.1.0-jar-with-dependencies.jar
+target/TranskribusBaseLineEvaluationScheme-x.x.x-jar-with-dependencies.jar
 ```
 ### Running
-See source code of
-eu.transkribus.baselineevaluationscheme.Metric_BL_run
-how the tool works.
+Have a look at the provided examples!  
 
 If you only want to USE the tool run
 ```
-java -jar target/TranskribusBaseLineEvaluationScheme-0.1.0-jar-with-dependencies.jar --help
+java -jar target/TranskribusBaseLineEvaluationScheme-x.x.x-jar-with-dependencies.jar --help
 ```
 for the help.
 
