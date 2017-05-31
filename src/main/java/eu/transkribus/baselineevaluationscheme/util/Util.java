@@ -203,7 +203,7 @@ public class Util {
         if (polyFileName.endsWith(".txt")) {
             ArrayList<String> polyString = Util.loadTextFile(polyFileName);
             if (polyString == null || polyString.size() == 0 || polyString.get(0).isEmpty()) {
-                return null;
+                return new LoadResult(new Polygon[0], false);
             }
 
             List<Polygon> res = new ArrayList<Polygon>();
@@ -215,7 +215,7 @@ public class Util {
                         res.add(aPoly);
                     }
                 } catch (IllegalArgumentException ex) {
-                    return new LoadResult(null, true);
+                    return new LoadResult(new Polygon[0], true);
                 }
             }
             return new LoadResult(asArray(res), false);
@@ -230,7 +230,7 @@ public class Util {
                 if (aPage == null) {
                     System.out.println(polyFileName);
                     System.out.println("Error while parsing xml-File.");
-                    return new LoadResult(null, true);
+                    return new LoadResult(new Polygon[0], true);
                 }
                 List<Region> regionsSorted = aPage.getLayout().getRegionsSorted();
                 for (Region reg : regionsSorted) {
@@ -265,7 +265,7 @@ public class Util {
                 Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
-        return new LoadResult(null, true);
+        return new LoadResult(new Polygon[0], true);
     }
 
     public static Polygon[] normDesDist(Polygon[] polyIn, int desDist) {
