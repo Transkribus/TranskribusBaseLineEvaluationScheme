@@ -252,5 +252,17 @@ public class BaseLineMetricResult {
         }
         return res;
     }
+
+	@Override
+	public String toString() {
+		return "BaseLineMetricResult [pageWisePerDistTolTickPerLineRecall=" + pageWisePerDistTolTickPerLineRecall
+				+ ", pageWisePerDistTolTickRecall=" + pageWisePerDistTolTickRecall + ", pageWiseRecall="
+				+ pageWiseRecall + ", recall=" + recall + ", pageWisePerDistTolTickPerLinePrecision="
+				+ pageWisePerDistTolTickPerLinePrecision + ", pageWisePerDistTolTickPrecision="
+				+ pageWisePerDistTolTickPrecision + ", pageWisePrecision=" + pageWisePrecision + ", precision="
+				+ precision + "]";
+	}
+    
+    
     
 }

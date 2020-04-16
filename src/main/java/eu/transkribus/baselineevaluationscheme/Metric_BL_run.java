@@ -39,6 +39,7 @@ import org.primaresearch.io.xml.XmlModelAndValidatorProvider;
 public class Metric_BL_run {
 
     private final Options options = new Options();
+    BaseLineMetricResult res;
 
     public Metric_BL_run() {
         options.addOption("h", "help", false, "show this help");
@@ -249,7 +250,8 @@ public class Metric_BL_run {
             }
 
             //Getting the result structure
-            BaseLineMetricResult res = m_bl.getRes();
+//            BaseLineMetricResult res = m_bl.getRes();
+            res = m_bl.getRes();
 
 //            sb.append("Number of correctly loaded pages: " + );
             DecimalFormat df = new DecimalFormat("##.####");
@@ -467,6 +469,10 @@ public class Metric_BL_run {
         } catch (ParseException e) {
             help("Failed to parse comand line properties", e);
         }
+    }
+    
+    public BaseLineMetricResult getRes() { 
+    	return res;
     }
 
     /**
