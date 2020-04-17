@@ -33,7 +33,7 @@ import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import org.primaresearch.dla.page.Page;
-import org.primaresearch.dla.page.io.xml.PageXmlInputOutput;
+import org.primaresearch.dla.page.io.xml.XmlInputOutput;
 import org.primaresearch.dla.page.layout.physical.Region;
 import org.primaresearch.dla.page.layout.physical.text.LowLevelTextObject;
 import org.primaresearch.dla.page.layout.physical.text.impl.TextLine;
@@ -117,7 +117,7 @@ public class Util {
             try {
                 List<List<Polygon>> res = new ArrayList<>();
 //                aPage = reader.read(new FileInput(new File(fileName)));
-                aPage = PageXmlInputOutput.readPage(fileName);
+                aPage = XmlInputOutput.readPage(fileName);
                 if (aPage == null) {
                     System.out.println("Error while parsing xml-File.");
                     return null;
@@ -170,7 +170,7 @@ public class Util {
             try {
                 List<Polygon> res = new ArrayList<>();
 //                aPage = reader.read(new FileInput(new File(fileName)));
-                aPage = PageXmlInputOutput.readPage(fileName);
+                aPage = XmlInputOutput.readPage(fileName);
                 if (aPage == null) {
                     System.out.println("Error while parsing xml-File.");
                     return null;
@@ -226,7 +226,7 @@ public class Util {
             try {
 //                System.out.println(polyFileName);
 //                aPage = reader.read(new FileInput(new File(polyFileName)));
-                aPage = PageXmlInputOutput.readPage(polyFileName);
+                aPage = XmlInputOutput.readPage(polyFileName);
                 if (aPage == null) {
                     System.out.println(polyFileName);
                     System.out.println("Error while parsing xml-File.");

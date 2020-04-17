@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>eu.transkribus</groupId>
     <artifactId>TranskribusBaseLineEvaluationScheme</artifactId>
-    <version>0.1.4</version>
+    <version>0.1.5-SNAPSHOT</version>
     <packaging>jar</packaging>
     <repositories>
         <!-- dea artifactory: -->		
@@ -17,22 +17,26 @@
         <dependency>
             <groupId>org.primaresearch</groupId>
             <artifactId>PrimaDla</artifactId>
-            <version>1.2-URO</version>
+<!--             <version>1.2-URO</version> -->
+            <version>15-10-2013</version>
 	</dependency>
 	<dependency>
             <groupId>org.primaresearch</groupId>
             <artifactId>PrimaBasic</artifactId>
-            <version>1.2-URO</version>
+<!--             <version>1.2-URO</version> -->
+            <version>15-10-2013</version>
 	</dependency>
 	<dependency>
             <groupId>org.primaresearch</groupId>
             <artifactId>PrimaIo</artifactId>
-            <version>1.2-URO</version>
+<!--             <version>1.2-URO</version> -->
+            <version>15-10-2013</version>
 	</dependency>
 	<dependency>
             <groupId>org.primaresearch</groupId>
             <artifactId>PrimaMaths</artifactId>
-            <version>1.2-URO</version>
+<!--             <version>1.2-URO</version> -->
+            <version>15-10-2013</version>
 	</dependency>
         <dependency>
             <groupId>commons-cli</groupId>
